@@ -1,0 +1,76 @@
+# ============================================================
+# 3DS Anomaly Detection System — Docker Compose
+# Single-host MVP deployment (§13)
+# ============================================================
+#
+# Startup sequence:
+#   1. docker compose up redis postgres -d
+#   2. python scripts/generate_dataset.py
+#   3. python scripts/bootstrap_profiles.py --redis
+#   4. python scripts/compute_vectors.py
+#   5. python scripts/train_model.py
+#   6. docker compose up --build
+# ============================================================
+
+version: "3.9"
+
+services:
+
+
+  # --- PostgreSQL Audit Log ---
+  postgres:
+    image: postgres:16-alpine
+    container_name: anomaly-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: anomaly_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # --- FastAPI Scoring Engine ---
+  scoring-engine:
+    build:
+      context: ./scoring-engine
+      dockerfile: Dockerfile
+    container_name: anomaly-scoring
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /app/model/isolation_forest.pkl
+      PG_DSN: postgresql://postgres:postgres@postgres:5432/anomaly_db
+    volumes:
+      - ./model:/app/model:ro
+      - ./data:/app/data:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # --- Node.js API Gateway ---
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: anomaly-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      SCORING_ENGINE_URL: http://scoring-engine:8000
+      API_KEY: dev-api-key-change-in-production
+    depends_on:
+      - scoring-engine
+    restart: unless-stopped
+
+volumes:
+  pg_data:
