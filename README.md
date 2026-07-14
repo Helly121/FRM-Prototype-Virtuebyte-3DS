@@ -16,24 +16,24 @@ The system follows a lean microservices architecture powered by **Uvicorn** for 
 
 ```mermaid
 flowchart TB
-    DS[3DS Directory Server\nAReq payload]
+    DS["3DS Directory Server\nAReq payload"]
 
     subgraph GW["API Gateway — Node.js / Express"]
-        V[JSON Schema Validation]
-        H[SHA-256 acctNumber hash]
-        RL[Rate Limiting]
-        P[Proxy to FastAPI]
+        V["JSON Schema Validation"]
+        H["SHA-256 acctNumber hash"]
+        RL["Rate Limiting"]
+        P["Proxy to FastAPI"]
     end
 
     subgraph SE["Scoring Engine — Python / FastAPI (Uvicorn)"]
         direction TB
         ST["Startup: load IF.pkl into RAM\nopen Postgres pools"]
-        RF[Fetch profile from DB/Cache]
-        FE2[Feature Extraction\n50 fields → preprocessing]
-        SC2[Compute 40-dim Surprise Vector\n(all §6 formulas)]
-        IF2[Isolation Forest inference\nIF.pkl already in RAM]
-        WS[Weighted sum → TotalDeviation]
-        EX[Explanation Generator\ntemplate-fill, rank, tier]
+        RF["Fetch profile from DB/Cache"]
+        FE2["Feature Extraction\n50 fields → preprocessing"]
+        SC2["Compute 40-dim Surprise Vector\n(all §6 formulas)"]
+        IF2["Isolation Forest inference\nIF.pkl already in RAM"]
+        WS["Weighted sum → TotalDeviation"]
+        EX["Explanation Generator\ntemplate-fill, rank, tier"]
         BG["BackgroundTasks (post-response)\n• update_profile\n• write_audit → Postgres"]
     end
 
@@ -47,7 +47,7 @@ flowchart TB
     SC2 --> WS
     IF2 --> EX
     WS --> EX
-    EX --> RESP[DeviationReport JSON]
+    EX --> RESP["DeviationReport JSON"]
     RESP --> BG
     BG --> PG
 ```
