@@ -144,8 +144,8 @@ CROSS_FIELD_WEIGHTS = {
 # Calibrated against synthetic data. Adjust after observing real transactions.
 # TotalDeviation is the weighted sum of all surprise scores.
 
-TIER_HIGH_DEVIATION = 2.5      # TotalDeviation >= this → HIGH
-TIER_MED_DEVIATION = 1.0       # TotalDeviation >= this → MEDIUM
+TIER_HIGH_DEVIATION = 3.0      # TotalDeviation >= this → HIGH
+TIER_MED_DEVIATION = 1.5       # TotalDeviation >= this → MEDIUM
 
 # Isolation Forest score boundaries (negative = more anomalous)
 IF_HIGH_THRESHOLD = -0.15      # IF score <= this → force HIGH

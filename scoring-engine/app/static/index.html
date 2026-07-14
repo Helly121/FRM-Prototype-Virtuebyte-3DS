@@ -23,8 +23,14 @@
             </div>
         </header>
 
+        <!-- Tab Navigation -->
+        <nav class="tab-nav glass-panel">
+            <button class="tab-btn active" id="tab-btn-simulator">Simulator</button>
+            <button class="tab-btn" id="tab-btn-audit">Audit Log</button>
+        </nav>
+
         <!-- Main Dashboard Layout -->
-        <main class="dashboard">
+        <main class="dashboard tab-content active" id="tab-simulator">
             <!-- Left Pane: Transaction Simulator -->
             <section class="panel simulator-panel glass-panel">
                 <div class="panel-header">
@@ -73,7 +79,7 @@
                             <div class="metric-value" id="val-deviation">0.00</div>
                         </div>
                         <div class="metric-card">
-                            <h3 class="metric-label">IF Score</h3>
+                            <h3 class="metric-label">Model Trust</h3>
                             <div class="metric-value" id="val-ifscore">0.00</div>
                         </div>
                         <div class="metric-card">
@@ -105,6 +111,32 @@
                 </div>
             </section>
         </main>
+
+        <!-- Audit Log Layout -->
+        <section class="audit-tab tab-content" id="tab-audit" style="display: none;">
+            <div class="panel glass-panel">
+                <div class="panel-header">
+                    <h2>Scored Transactions Log</h2>
+                    <p>Recent transactions audited by the scoring engine in PostgreSQL.</p>
+                </div>
+                <div class="table-container">
+                    <table class="audit-table">
+                        <thead>
+                            <tr>
+                                <th>Txn ID</th>
+                                <th>Card Hash</th>
+                                <th>Timestamp</th>
+                                <th>Tier</th>
+                                <th>Model Trust</th>
+                            </tr>
+                        </thead>
+                        <tbody id="audit-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script src="/static/script.js"></script>

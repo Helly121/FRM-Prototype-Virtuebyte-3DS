@@ -270,9 +270,14 @@ def build_report(
         weighted_scores[dim_name] = w * s
 
     # 2. Add cross-field weighted contributions
-    for cf_name, cf_score in cross_field_scores.items():
+    for cf_name, cf_data in cross_field_scores.items():
         w = CROSS_FIELD_WEIGHTS.get(cf_name, 0.0)
-        weighted_scores[cf_name] = w * float(cf_score)
+        if isinstance(cf_data, dict):
+            raw_score = float(cf_data.get("score", 0.0))
+            contributions[cf_name] = cf_data
+        else:
+            raw_score = float(cf_data)
+        weighted_scores[cf_name] = w * raw_score
 
     total_deviation = sum(weighted_scores.values())
 

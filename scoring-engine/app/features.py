@@ -301,7 +301,12 @@ def cross_field_checks(payload: dict, profile: dict) -> dict:
     device_dt = parse_dt(payload.get("dateTime"))
     purchase_dt = parse_dt(payload.get("purchaseDate"))
     skew_s = abs((device_dt - purchase_dt).total_seconds())
-    checks["s_clock_skew"] = 5.0 if skew_s > CLOCK_SKEW_THRESHOLD_S else 0.0
+    score = 5.0 if skew_s > CLOCK_SKEW_THRESHOLD_S else 0.0
+    checks["s_clock_skew"] = {
+        "score": score,
+        "observed": f"{skew_s:.0f}s skew",
+        "expected": f"<= {CLOCK_SKEW_THRESHOLD_S}s",
+    }
 
     # 2. Platform ↔ OS Name coherence
     platform = str(payload.get("Platform", "")).lower()
@@ -310,45 +315,62 @@ def cross_field_checks(payload: dict, profile: dict) -> dict:
         ("android" in platform and "ios" in os_name) or
         ("ios" in platform and "android" in os_name)
     )
-    checks["s_platform_os_coherence"] = 5.0 if incoherent else 0.0
+    checks["s_platform_os_coherence"] = {
+        "score": 5.0 if incoherent else 0.0,
+        "observed": f"{platform} with {os_name}",
+        "expected": "Matching OS and Platform",
+    }
 
     # 3. GPS vs billing centroid distance
     try:
         obs_lat = float(payload.get("Latitude", 0) or 0)
         obs_lon = float(payload.get("Longitude", 0) or 0)
         merchant = profile.get("merchant", {})
-        checks["s_gps_billing_dist"] = surprise_geo(
+        score = surprise_geo(
             obs_lat, obs_lon,
             merchant.get("billing_lat", 0.0),
             merchant.get("billing_lon", 0.0),
             merchant.get("billing_radius_km", GEO_MIN_RADIUS_KM),
         )
+        checks["s_gps_billing_dist"] = {
+            "score": score,
+            "observed": f"({obs_lat}, {obs_lon})",
+            "expected": f"billing_centroid=({merchant.get('billing_lat', 0.0)}, {merchant.get('billing_lon', 0.0)})",
+        }
     except (TypeError, ValueError):
-        checks["s_gps_billing_dist"] = 0.0
+        checks["s_gps_billing_dist"] = {"score": 0.0, "observed": "N/A", "expected": "N/A"}
 
     # 4. txnActivityDay vs txnActivityYear cross-validation
     txn_year = float(payload.get("txnActivityYear", 0) or 0)
     txn_day = float(payload.get("txnActivityDay", 0) or 0)
+    score = 0.0
     if txn_year > 0:
         daily_rate = txn_year / 365
-        if txn_day > daily_rate * 3:
-            checks["s_velocity_crosscheck"] = 2.0
-        else:
-            checks["s_velocity_crosscheck"] = 0.0
-    else:
-        checks["s_velocity_crosscheck"] = 0.0
+        if txn_day > max(3.0, daily_rate * 3):
+            score = 2.0
+            
+    checks["s_velocity_crosscheck"] = {
+        "score": score,
+        "observed": f"{txn_day} txns/day",
+        "expected": f"<= max(3, {daily_rate*3:.1f}) based on yearly rate",
+    }
 
     # 5. Shipping address hash vs billing (new-address signal)
     ship_city = str(payload.get("shipAddrCity", "") or "")
     ship_country = str(payload.get("shipAddrCountry", "") or "")
     if ship_city or ship_country:
         ship_hash = sha256_str(f"{ship_city}|{ship_country}")
-        checks["s_new_shipping_context"] = surprise_known_unknown(
+        score = surprise_known_unknown(
             ship_hash,
             profile.get("merchant", {}).get("shipping_addr_hashes", []),
         )
+        checks["s_new_shipping_context"] = {
+            "score": score,
+            "observed": "New shipping address",
+            "expected": "Known shipping address",
+        }
     else:
-        checks["s_new_shipping_context"] = 0.0
+        checks["s_new_shipping_context"] = {"score": 0.0, "observed": "N/A", "expected": "N/A"}
 
     return checks
 
@@ -594,12 +616,42 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[18] = acctinfo_scores.get("s_suspicious", 0.0)
     surprise[19] = acctinfo_scores.get("s_ship_name_match", 0.0)
 
-    for k, v in acctinfo_scores.items():
-        contributions[k] = {
-            "score": v,
-            "observed": str(payload.get(_dim_to_payload_field(k), "")),
-            "expected": "profile baseline",
-        }
+    contributions["s_ch_acc_age_regression"] = {
+        "score": surprise[11], "observed": str(payload.get("chAccAgeInd", "")),
+        "expected": f"last={req.get('ch_acc_age_ind_last', '')}",
+    }
+    contributions["s_ch_acc_change"] = {
+        "score": surprise[12], "observed": str(payload.get("chAccChangeInd", "")),
+        "expected": f"EWMA={req.get('ch_acc_change_ind_ewma', 0):.2f}",
+    }
+    contributions["s_pw_change"] = {
+        "score": surprise[13], "observed": str(payload.get("chAccPwChangeInd", "")),
+        "expected": f"EWMA={req.get('ch_acc_pw_change_ind_ewma', 0):.2f}",
+    }
+    contributions["s_txn_vel_day"] = {
+        "score": surprise[14], "observed": str(payload.get("txnActivityDay", "")),
+        "expected": f"EWMA={req.get('txn_activity_day_ewma', 0):.2f}",
+    }
+    contributions["s_txn_vel_year"] = {
+        "score": surprise[15], "observed": str(payload.get("txnActivityYear", "")),
+        "expected": f"EWMA={req.get('txn_activity_year_ewma', 0):.2f}",
+    }
+    contributions["s_provision_attempts"] = {
+        "score": surprise[16], "observed": str(payload.get("provisionAttemptsDay", "")),
+        "expected": f"EWMA={req.get('provision_attempts_ewma', 0):.2f}",
+    }
+    contributions["s_nb_purchase"] = {
+        "score": surprise[17], "observed": str(payload.get("nbPurchaseAccount", "")),
+        "expected": f"EWMA={req.get('nb_purchase_ewma', 0):.2f}",
+    }
+    contributions["s_suspicious"] = {
+        "score": surprise[18], "observed": str(payload.get("suspiciousAccActivity", "")),
+        "expected": "02 (normal)",
+    }
+    contributions["s_ship_name_match"] = {
+        "score": surprise[19], "observed": str(payload.get("shipNameIndicator", "")),
+        "expected": f"match_rate={req.get('ship_name_match_rate', 1.0):.2f}",
+    }
 
     # ---- Merchant Details (dims 20–26) ----
 

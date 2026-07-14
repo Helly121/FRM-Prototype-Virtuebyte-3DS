@@ -5,6 +5,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const loader = document.getElementById('score-loader');
     const btnText = document.querySelector('.btn-text');
     
+    // Tab DOM
+    const btnSimulator = document.getElementById('tab-btn-simulator');
+    const btnAudit = document.getElementById('tab-btn-audit');
+    const tabSimulator = document.getElementById('tab-simulator');
+    const tabAudit = document.getElementById('tab-audit');
+    const auditTableBody = document.getElementById('audit-table-body');
+    
     // Results DOM
     const emptyState = document.getElementById('results-empty');
     const resultsContent = document.getElementById('results-content');
@@ -19,13 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Sample Payloads
     const normalPayload = {
-        "card_id_hash": "demo_card_presentation",
+        "simulate_only": true,
+        "card_id_hash": "00dd14b7deb88c381b2caae225819d34da20c27f81a2e807baaf0b4eb7153b5f",
         "acctType": "01",
         "mcc": "5411",
         "merchantCountryCode": "356",
-        "purchaseAmount": 1500.0,
+        "purchaseAmount": 1000.0,
         "purchaseCurrency": "356",
-        "purchaseDate": "2026-06-27T14:30:00+05:30",
+        "purchaseDate": "2026-07-15T13:30:00+05:30",  // Wednesday, 1:30 PM (historically common)
         "cardSecurityCodeStatus": "01",
         "threeDSRequestorID": "REQ0001",
         "threeDSRequestorName": "Amazon India",
@@ -55,34 +63,41 @@ document.addEventListener('DOMContentLoaded', () => {
         "sdkInterface": "03",
         "sdkUiType": "01",
         "Platform": "Android",
-        "DeviceModel": "Samsung Galaxy S23",
+        "DeviceModel": "Samsung Galaxy A34",
         "OSName": "Android",
         "OSVersion": "14",
         "Locale": "en_IN",
         "TimeZone": "Asia/Kolkata",
         "ScreenResolution": "1080x2340",
-        "DeviceName": "Android_Samsung_Galaxy_S23",
+        "DeviceName": "Android_Samsung_Galaxy_A34",
         "IPAddress": "192.168.1.100",
         "Latitude": 18.52,
         "Longitude": 73.85,
-        "ApplicationPackageName": "com.merchant.pay.app1",
+        "ApplicationPackageName": "ef4f7219af5508087f0461e6c4a1bab855ec8ac6332cebcd659c3098b5c1c23e",
         "SDKAppID": "sdk_app_test",
         "SDKVersion": "5.3.0",
         "SDKRefNumber": "SDK_REF_CONSTANT_HASH_V1",
-        "dateTime": "2026-06-27T14:30:03+05:30"
+        "dateTime": "2026-07-15T13:30:03+05:30"
     };
 
     const anomalyPayload = {
         ...normalPayload,
-        "purchaseAmount": 95000.0,
-        "txnActivityDay": 10,
-        "Platform": "iOS",
-        "DeviceModel": "iPhone 15 Pro",
-        "OSName": "iOS",
-        "OSVersion": "17.5",
-        "ScreenResolution": "1179x2556",
-        "IPAddress": "203.0.113.42",
-        "ApplicationPackageName": "com.unknown.app.xyz123"
+        "purchaseAmount": 950000.0,
+        "purchaseCurrency": "840", // USD
+        "merchantCountryCode": "840", // US
+        "mcc": "5944", // Jewelry Store
+        "purchaseDate": "2026-07-19T03:15:00+05:30", // Sunday 3 AM
+        "txnActivityDay": 15,
+        "Platform": "macOS",
+        "DeviceModel": "MacBook Pro M3",
+        "OSName": "macOS",
+        "OSVersion": "14.4",
+        "ScreenResolution": "3024x1964",
+        "IPAddress": "8.8.8.8", // Foreign IP
+        "Latitude": 37.77,
+        "Longitude": -122.41,
+        "ApplicationPackageName": "com.unknown.fraud.app",
+        "chAccChangeInd": "01" // Password just changed
     };
 
     // Initialization
@@ -151,7 +166,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update Top Metrics
         valTier.textContent = report.deviation_tier;
         valDeviation.textContent = report.total_deviation.toFixed(2);
-        valIfscore.textContent = report.if_score.toFixed(4);
+        // Map IF Score to a 0-100% Trust Score
+        let trustPct = Math.min(100, Math.max(0, 100 + (report.if_score * 400)));
+        valIfscore.textContent = trustPct.toFixed(1) + '%';
         valLatency.textContent = `${report.metadata.scoring_latency_ms.toFixed(1)} ms`;
 
         // Update Tier Styling
@@ -217,5 +234,68 @@ document.addEventListener('DOMContentLoaded', () => {
         const formatted = fieldName.replace(/([A-Z])/g, ' $1').trim();
         // Capitalize first letter
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+    }
+
+    // Tab Switching Logic
+    btnSimulator.addEventListener('click', () => {
+        btnSimulator.classList.add('active');
+        btnAudit.classList.remove('active');
+        tabSimulator.style.display = 'grid';
+        tabAudit.style.display = 'none';
+    });
+
+    btnAudit.addEventListener('click', () => {
+        btnAudit.classList.add('active');
+        btnSimulator.classList.remove('active');
+        tabSimulator.style.display = 'none';
+        tabAudit.style.display = 'block';
+        fetchAuditLog();
+    });
+
+    // Fetch and render audit log
+    async function fetchAuditLog() {
+        auditTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading audit logs...</td></tr>';
+        
+        try {
+            const response = await fetch('/internal/audit');
+            if (!response.ok) throw new Error("Failed to fetch audit log");
+            
+            const logs = await response.json();
+            
+            if (logs.length === 0) {
+                auditTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">No transactions audited yet.</td></tr>';
+                return;
+            }
+
+            auditTableBody.innerHTML = '';
+            logs.forEach(log => {
+                const tr = document.createElement('tr');
+                
+                // Format Timestamp
+                const dt = new Date(log.scored_at);
+                const timeString = dt.toLocaleString();
+                
+                // Tier Badge
+                let badgeClass = 'low';
+                if (log.deviation_tier === 'MEDIUM') badgeClass = 'medium';
+                if (log.deviation_tier === 'HIGH') badgeClass = 'high';
+                
+                // Calculate Model Trust Percentage
+                let trustPct = Math.min(100, Math.max(0, 100 + (log.if_score * 400)));
+                
+                tr.innerHTML = `
+                    <td style="font-family: var(--font-mono); color: var(--accent);">${log.txn_id.substring(0, 8)}...</td>
+                    <td style="font-family: var(--font-mono);">${log.card_id_hash.substring(0, 12)}...</td>
+                    <td style="color: var(--text-muted);">${timeString}</td>
+                    <td><span class="badge ${badgeClass}">${log.deviation_tier}</span></td>
+                    <td style="font-weight: 600;">${trustPct.toFixed(1)}%</td>
+                `;
+                auditTableBody.appendChild(tr);
+            });
+
+        } catch (err) {
+            console.error(err);
+            auditTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--status-high);">Error loading audit logs.</td></tr>';
+        }
     }
 });

@@ -1,0 +1,289 @@
+{
+  "card_id_hash": "00dd14b7deb88c381b2caae225819d34da20c27f81a2e807baaf0b4eb7153b5f",
+  "profile": {
+    "_meta": {
+      "created_at": 1783763846.5233781,
+      "card_id_hash": "00dd14b7deb88c381b2caae225819d34da20c27f81a2e807baaf0b4eb7153b5f",
+      "last_updated": 1783763846.5394921,
+      "transaction_count": 70,
+      "history_depth_days": 1.8650458918677437e-07,
+      "profile_confidence": 1.0
+    },
+    "device": {
+      "geo_lat": 22.570168399999996,
+      "geo_lon": 88.36269497142857,
+      "probation": {},
+      "locale_freq": {
+        "en_IN": 69.99999996157756
+      },
+      "os_name_freq": {
+        "Android": 69.99999997438506
+      },
+      "geo_radius_km": 2.8102644810262714,
+      "platform_freq": {
+        "Android": 69.99999998736797
+      },
+      "known_timezones": [
+        "Asia/Kolkata"
+      ],
+      "os_version_freq": {
+        "13": 69.99999996157756
+      },
+      "device_fp_hashes": [
+        "29251506d579eddb80a6091451c88a5d14c9e54dd0af16b7d36f396d6c6fdd5c",
+        "da2e8ade1fb92dc40ed69b32a9d0cf9013604331f9ca4a49d2825c67722d3157"
+      ],
+      "known_ip_subnets": [
+        "23.97.188.0/24"
+      ],
+      "sdk_version_freq": {
+        "5.1.0": 69.99999996157756
+      },
+      "device_model_freq": {
+        "Samsung Galaxy A34": 65.99999997622473,
+        "Samsung Galaxy A54": 3.999999998160323
+      },
+      "known_resolutions": [
+        "1080x2340"
+      ],
+      "known_sdk_app_ids": [
+        "005af70107e9a7fc7e059e08a2ca4504f4e89e5e3cd56cc3a7e44f87c6fe89cf"
+      ],
+      "known_app_packages": [
+        "ef4f7219af5508087f0461e6c4a1bab855ec8ac6332cebcd659c3098b5c1c23e"
+      ],
+      "known_device_names": [
+        "84d2edf9fd0f3a3f5bcdc89cd1de3cfe1687d3c7a9a64c0e2ccbcdaf607d90f4"
+      ],
+      "known_sdk_interfaces": [
+        "01",
+        "02"
+      ],
+      "expected_sdk_ref_hash": "444a8d95950a48b678cdc3d5221d9ec6753917e68a6a68c27f0f5b2def04a8bc"
+    },
+    "merchant": {
+      "billing_lat": 0.0,
+      "billing_lon": 0.0,
+      "shipping_lat": 0.0,
+      "shipping_lon": 0.0,
+      "ship_ind_freq": {
+        "01": 37.9999999738413,
+        "02": 10.999999993271791,
+        "03": 12.999999988418447,
+        "04": 7.999999993238549
+      },
+      "billing_radius_km": 2.0,
+      "known_email_hashes": [
+        "81a59251e64c6c8e2a6227c484c07ae5f17dd9e04f7a81161b397ffd55904fc0"
+      ],
+      "known_merchant_ids": {
+        "MID000001": {
+          "freq": 56,
+          "last_seen": 1783763846.5394921
+        },
+        "MID000005": {
+          "freq": 1,
+          "last_seen": 1783763846.5273762
+        },
+        "MID000008": {
+          "freq": 2,
+          "last_seen": 1783763846.5394921
+        },
+        "MID000010": {
+          "freq": 1,
+          "last_seen": 1783763846.538482
+        },
+        "MID000015": {
+          "freq": 1,
+          "last_seen": 1783763846.5349717
+        },
+        "MID000017": {
+          "freq": 2,
+          "last_seen": 1783763846.5369697
+        },
+        "MID000019": {
+          "freq": 1,
+          "last_seen": 1783763846.5369697
+        },
+        "MID000024": {
+          "freq": 1,
+          "last_seen": 1783763846.5243824
+        },
+        "MID000025": {
+          "freq": 1,
+          "last_seen": 1783763846.5369697
+        },
+        "MID000027": {
+          "freq": 1,
+          "last_seen": 1783763846.532973
+        },
+        "MID000029": {
+          "freq": 2,
+          "last_seen": 1783763846.5319638
+        },
+        "MID000030": {
+          "freq": 1,
+          "last_seen": 1783763846.5349717
+        }
+      },
+      "known_phone_hashes": [
+        "62710d13633a966c12132cf08905130ac741e80ebf35f1438020d7c9e56b0f4d"
+      ],
+      "shipping_radius_km": 10.0,
+      "billing_addr_hashes": [
+        "76893e7a203e07d34779c7ee1d8abf6b58016e2e2d45745712b35dfbe5f985ba",
+        "053c90ca7c7877232f79a543a4bfbd2c0f255c9257103f3ce2354be0e6743d53",
+        "8f86357a775c0bb5e3afc20d8ff154a5d4dc88f85ea23f277fd189b95f1c2982"
+      ],
+      "known_acquirer_bins": [
+        "411111",
+        "422222",
+        "488888",
+        "444444",
+        "433333",
+        "466666",
+        "500000",
+        "499999",
+        "455555"
+      ],
+      "shipping_addr_hashes": [
+        "4cf8fdaabc625f4bd75091083b28a1659ea58d288ba8bb6e9db78132abdc4f3e",
+        "79a7695f403448970213b37fe25fabb7e30a2221d88ae5a9513d3ef8b3e17d49",
+        "21f43351fe041aa00466e2a2113395e81e538f2f1d14466114e532bc46c6064d",
+        "242874f49fb0aba4625d9e440ef41949a3d4151ffc780de9f513eec99b03bce1",
+        "2cc87fde7fe14e403fe06b73d8543ae6fa55ecab132b68a70ae8703a381d6033"
+      ]
+    },
+    "requestor": {
+      "auth_ind_freq": {
+        "01": 60.999999977165395,
+        "02": 7.999999997599694,
+        "03": 0.9999999996199528
+      },
+      "known_req_urls": [
+        "8f54b341ef65cb6e6d4e0032734d2290c7f6b304ec400e4d3039935ca24242db",
+        "b5a3d43ae3624ac398b43cd9f17c4ca8f505084491dc8e8acb5af94c916195c2",
+        "8e3e0d0d55b358f53c5c3556fa55f50d05bc1e6145344898ed5fd3e4de79a5ba",
+        "db9ef3f2f343166d60876a3d4c8e00a20d9edf4517f61ed20d579bd89e736b74",
+        "90e54f97033eca968fa71d9ef88aa50777c44ae5b3043d3d1750630a31a1fc38",
+        "34f386eb28e5bb8f13609e63f20cf3cac15dad83a7c5a9243e9bd00be785f1e2",
+        "eb4391227b66619442000ac5f7a34ab2553bf7573952240d349cddd6caf20dff",
+        "81d3f115efc2324dbff037df524807a7b5d8303ac3e5eb9ca799901e96cb0af7"
+      ],
+      "nb_purchase_var": 805.1280516372292,
+      "suspicious_ever": false,
+      "auth_method_freq": {
+        "01": 8.999999996949496,
+        "02": 34.999999987977596,
+        "06": 25.999999989457965
+      },
+      "known_requestors": {
+        "REQ0001": {
+          "freq": 53.999999978894365,
+          "last_seen": 1783763846.5394921
+        },
+        "REQ0004": {
+          "freq": 0.9999999998875745,
+          "last_seen": 1783763846.5369697
+        },
+        "REQ0006": {
+          "freq": 1,
+          "last_seen": 1783763846.5394921
+        },
+        "REQ0007": {
+          "freq": 1.999999999079949,
+          "last_seen": 1783763846.530965
+        },
+        "REQ0010": {
+          "freq": 0.9999999998875745,
+          "last_seen": 1783763846.5369697
+        },
+        "REQ0013": {
+          "freq": 1.9999999993295592,
+          "last_seen": 1783763846.5349717
+        },
+        "REQ0014": {
+          "freq": 0.9999999997985266,
+          "last_seen": 1783763846.5349717
+        },
+        "REQ0016": {
+          "freq": 1.9999999997094469,
+          "last_seen": 1783763846.5394921
+        },
+        "REQ0019": {
+          "freq": 0.9999999998875745,
+          "last_seen": 1783763846.5369697
+        },
+        "REQ0020": {
+          "freq": 0.9999999999549767,
+          "last_seen": 1783763846.538482
+        }
+      },
+      "nb_purchase_ewma": 45.83387252728053,
+      "ch_acc_age_ind_last": 5,
+      "ship_name_match_rate": 0.9971702960994373,
+      "txn_activity_day_var": 0.2753477988569481,
+      "txn_activity_day_ewma": 0.541182899458635,
+      "txn_activity_year_var": 45.97458565125899,
+      "ch_acc_change_ind_ewma": 3.985167580555925,
+      "provision_attempts_var": 0.0,
+      "txn_activity_year_ewma": 24.954372603783497,
+      "provision_attempts_ewma": 0.0,
+      "ch_acc_pw_change_ind_ewma": 4.370277675925706
+    },
+    "transaction": {
+      "dow_hist": [
+        0.22623166852282295,
+        0.11249067098787127,
+        0.055651912701061367,
+        0.2295873607559345,
+        0.12756940967056224,
+        0.09600492842221091,
+        0.15246404893953658
+      ],
+      "mcc_freq": {
+        "5411": 33.999999977456554,
+        "5912": 35.99999997131353
+      },
+      "hour_hist": [
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.15145533840038242,
+        0.1323516766435619,
+        0.13183347537350315,
+        0.10715528209758898,
+        0.23528152880418468,
+        0.03384579510878601,
+        0.0710683780684196,
+        0.08615404130387867,
+        0.0336146776767102,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271,
+        0.0011493204348656271
+      ],
+      "country_freq": {
+        "356": 69.99999997438506
+      },
+      "currency_freq": {
+        "356": 69.99999997438506
+      },
+      "acct_type_freq": {
+        "01": 55.99999998980281,
+        "02": 13.999999997565174
+      },
+      "cvv_match_rate": 0.9746110622940622,
+      "amount_ewma_log": 6.928317962489458,
+      "amount_ewma_var": 0.14933319736369588
+    }
+  }
+}

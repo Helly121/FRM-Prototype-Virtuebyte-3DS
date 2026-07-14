@@ -510,3 +510,112 @@ h1 span {
     color: var(--status-low);
     font-weight: bold;
 }
+
+/* Tabs */
+.tab-nav {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    font-family: var(--font-heading);
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.tab-btn:hover {
+    color: var(--text-main);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 3px;
+    box-shadow: 0 0 10px var(--accent-glow);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: grid;
+}
+
+.audit-tab.active {
+    display: block;
+    height: calc(100vh - 200px);
+}
+
+.audit-tab .panel {
+    height: 100%;
+    overflow-y: auto;
+}
+
+/* Audit Table */
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+    margin-top: 1rem;
+}
+
+.audit-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.audit-table th {
+    font-family: var(--font-heading);
+    color: var(--text-muted);
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0,0,0,0.2);
+}
+
+.audit-table td {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    vertical-align: middle;
+}
+
+.audit-table tbody tr {
+    transition: background 0.2s ease;
+}
+
+.audit-table tbody tr:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+.badge.low { background: var(--status-low-bg); color: var(--status-low); border: 1px solid rgba(52,211,153,0.2); }
+.badge.medium { background: var(--status-medium-bg); color: var(--status-medium); border: 1px solid rgba(251,191,36,0.2); }
+.badge.high { background: var(--status-high-bg); color: var(--status-high); border: 1px solid rgba(248,113,113,0.2); }

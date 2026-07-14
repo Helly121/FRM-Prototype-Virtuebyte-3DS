@@ -128,15 +128,6 @@ _profile_cache: dict = {}
 
 async def get_profile(card_id_hash: str) -> dict:
     """Fetch profile from PostgreSQL or in-memory cache."""
-    # --- Presentation Demo Override ---
-    if card_id_hash == "demo_card_presentation":
-        try:
-            demo_path = os.path.join(os.path.dirname(__file__), "demo_profile.json")
-            with open(demo_path, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Failed to load demo profile: {e}")
-            pass
 
     if pg_pool:
         try:
@@ -160,9 +151,6 @@ async def get_profile(card_id_hash: str) -> dict:
 
 async def save_profile(card_id_hash: str, profile: dict):
     """Save profile to PostgreSQL and in-memory cache."""
-    # --- Presentation Demo Override ---
-    if card_id_hash == "demo_card_presentation":
-        return
 
     if pg_pool:
         try:
@@ -311,16 +299,44 @@ async def score(payload: AReqPayload, background_tasks: BackgroundTasks):
     )
 
     # 5. Fire background tasks
-    background_tasks.add_task(
-        background_update_profile,
-        card_id_hash,
-        payload_dict,
-        profile,
-    )
+    if not payload.simulate_only:
+        background_tasks.add_task(
+            background_update_profile,
+            card_id_hash,
+            payload_dict,
+            profile,
+        )
     background_tasks.add_task(background_write_audit, report)
 
     return report
 
+
+# ---------------------------------------------------------------------------
+# Audit API
+# ---------------------------------------------------------------------------
+
+@app.get("/internal/audit", summary="Fetch recent scored transactions")
+async def get_audit_log(limit: int = 50):
+    """Fetch the latest transactions from the PostgreSQL audit log."""
+    if not pg_pool:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        async with pg_pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT txn_id, card_id_hash, deviation_tier, total_deviation,
+                       if_score, channel, scored_at
+                FROM scored_transactions
+                ORDER BY scored_at DESC
+                LIMIT $1
+                """,
+                limit
+            )
+            # asyncpg Records can be converted to dicts directly
+            return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Audit log fetch error: {e}")
+        raise HTTPException(status_code=500, detail="Database query failed")
 
 # ---------------------------------------------------------------------------
 # Health Check

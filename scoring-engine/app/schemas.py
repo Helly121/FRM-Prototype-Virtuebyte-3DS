@@ -22,6 +22,9 @@ class AReqPayload(BaseModel):
     # --- Identity (from gateway) ---
     card_id_hash: str = Field(..., title="Card ID Hash", description="SHA-256 hash of the Primary Account Number (PAN). Anonymised identity set by the API Gateway.")
 
+    # --- Simulator Control ---
+    simulate_only: bool = Field(False, title="Simulate Only", description="If True, skips writing the transaction into the historical profile to prevent corrupting the baseline during demos.")
+
     # --- Transaction Details ---
     acctType: Optional[str] = Field("01", title="Account Type", description="Type of account: 01 = Credit, 02 = Debit, 03 = Charge")
     mcc: Optional[str] = Field("", title="Merchant Category Code", description="4-digit ISO 18245 code describing the merchant's primary business (e.g., 5411 = Grocery Stores)")
