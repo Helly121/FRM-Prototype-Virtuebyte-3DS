@@ -12,9 +12,48 @@ This project is a high-performance **EMV 3-D Secure Anomaly Detection Scoring En
 
 ## Architecture
 
-The system follows a lean microservices architecture:
+The system follows a lean microservices architecture powered by **Uvicorn** for high-performance ASGI serving:
+
+```mermaid
+flowchart TB
+    DS[3DS Directory Server\nAReq payload]
+
+    subgraph GW["API Gateway — Node.js / Express"]
+        V[JSON Schema Validation]
+        H[SHA-256 acctNumber hash]
+        RL[Rate Limiting]
+        P[Proxy to FastAPI]
+    end
+
+    subgraph SE["Scoring Engine — Python / FastAPI (Uvicorn)"]
+        direction TB
+        ST["Startup: load IF.pkl into RAM\nopen Postgres pools"]
+        RF[Fetch profile from DB/Cache]
+        FE2[Feature Extraction\n50 fields → preprocessing]
+        SC2[Compute 40-dim Surprise Vector\n(all §6 formulas)]
+        IF2[Isolation Forest inference\nIF.pkl already in RAM]
+        WS[Weighted sum → TotalDeviation]
+        EX[Explanation Generator\ntemplate-fill, rank, tier]
+        BG["BackgroundTasks (post-response)\n• update_profile\n• write_audit → Postgres"]
+    end
+
+    PG[("PostgreSQL\nProfile & Audit Log")]
+
+    DS --> GW
+    GW --> SE
+    SE --> RF --> PG
+    RF --> FE2 --> SC2
+    SC2 --> IF2
+    SC2 --> WS
+    IF2 --> EX
+    WS --> EX
+    EX --> RESP[DeviationReport JSON]
+    RESP --> BG
+    BG --> PG
+```
+
 1. **API Gateway (Node.js/Express)**: Handles payload validation, authentication, rate limiting, and hashing of sensitive fields (e.g., PANs) before routing to the scoring engine.
-2. **Scoring Engine (Python/FastAPI)**: The core intelligence. It extracts features, calculates Total Deviation using expert-set static weights, runs the Isolation Forest inference, and determines the final risk tier (`LOW`, `MEDIUM`, `HIGH`).
+2. **Scoring Engine (Python/FastAPI via Uvicorn)**: The core intelligence. It extracts features, calculates Total Deviation using expert-set static weights, runs the Isolation Forest inference, and determines the final risk tier (`LOW`, `MEDIUM`, `HIGH`).
 3. **Database (PostgreSQL)**: Serves as a persistent store for historical transaction profiles (via the `synthetic_profiles` table) and an audit log for all scored transactions.
 4. **Presentation Dashboard**: A beautifully designed, interactive Vanilla JS + HTML web interface directly served by the FastAPI engine, allowing you to test and visualize "Normal" vs. "Anomalous" transactions in real-time.
 
