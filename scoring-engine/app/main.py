@@ -462,6 +462,34 @@ async def get_audit_log(limit: int = 50):
         logger.error(f"Audit log fetch error: {e}")
         raise HTTPException(status_code=500, detail="Database query failed")
 
+@app.get("/internal/db-explorer", summary="Fetch database profiles")
+async def get_db_explorer(limit: int = 50):
+    """Fetch raw profiles from PostgreSQL for database explorer."""
+    if not pg_pool:
+        raise HTTPException(status_code=503, detail="Database not connected")
+    try:
+        async with pg_pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT card_id_hash, profile, created_at, updated_at, version
+                FROM card_profiles
+                ORDER BY updated_at DESC
+                LIMIT $1
+                """,
+                limit
+            )
+            import json
+            results = []
+            for row in rows:
+                d = dict(row)
+                if isinstance(d['profile'], str):
+                    d['profile'] = json.loads(d['profile'])
+                results.append(d)
+            return results
+    except Exception as e:
+        logger.error(f"DB Explorer fetch error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch DB rows")
+
 # ---------------------------------------------------------------------------
 # Feedback API
 # ---------------------------------------------------------------------------

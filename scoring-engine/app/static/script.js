@@ -12,6 +12,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabSimulator = document.getElementById('tab-simulator');
     const tabAudit = document.getElementById('tab-audit');
     const auditTableBody = document.getElementById('audit-table-body');
+    const btnDb = document.getElementById('tab-btn-db');
+    const tabDb = document.getElementById('tab-db');
+    const dbListBody = document.getElementById('db-list-body');
+    const dbJsonContent = document.getElementById('db-json-content');
+    const dbViewerTitle = document.getElementById('db-viewer-title');
+    const btnRefreshDb = document.getElementById('btn-refresh-db');
     
     // Results DOM
     const emptyState = document.getElementById('results-empty');
@@ -279,21 +285,53 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Tab Switching Logic
-    btnSimulator.addEventListener('click', () => {
-        btnSimulator.classList.add('active');
-        btnAudit.classList.remove('active');
-        tabSimulator.style.display = 'grid';
-        tabAudit.style.display = 'none';
-    });
+    // Menu DOM elements
+    const btnDemo = document.getElementById('tab-btn-demo');
+    const tabDemo = document.getElementById('tab-demo');
+    const breadcrumbActive = document.getElementById('breadcrumb-active');
+    
+    // View Switching Logic
+    function switchView(activeBtn, activeTab, title) {
+        // Reset all buttons
+        [btnSimulator, btnAudit, btnDb, btnDemo].forEach(btn => {
+            if(btn) btn.classList.remove('active');
+        });
+        // Reset all tabs
+        [tabSimulator, tabAudit, tabDb, tabDemo].forEach(tab => {
+            if(tab) tab.classList.remove('active');
+        });
+        
+        // Activate current
+        if(activeBtn) activeBtn.classList.add('active');
+        if(activeTab) activeTab.classList.add('active');
+        if(breadcrumbActive) breadcrumbActive.innerText = title;
+    }
 
-    btnAudit.addEventListener('click', () => {
-        btnAudit.classList.add('active');
-        btnSimulator.classList.remove('active');
-        tabSimulator.style.display = 'none';
-        tabAudit.style.display = 'block';
-        fetchAuditLog();
-    });
+    if(btnSimulator) btnSimulator.addEventListener('click', () => switchView(btnSimulator, tabSimulator, "Transaction Simulator"));
+    
+    if(btnAudit) {
+        btnAudit.addEventListener('click', () => {
+            switchView(btnAudit, tabAudit, "Audit Log");
+            fetchAuditLog();
+        });
+    }
+
+    if(btnDb) {
+        btnDb.addEventListener('click', () => {
+            switchView(btnDb, tabDb, "Profile Explorer");
+            fetchDbExplorer();
+        });
+    }
+    
+    if(btnDemo) {
+        btnDemo.addEventListener('click', () => {
+            switchView(btnDemo, tabDemo, "Dynamic Simulator");
+        });
+    }
+
+    if (btnRefreshDb) {
+        btnRefreshDb.addEventListener('click', fetchDbExplorer);
+    }
 
     // Fetch and render audit log
     async function fetchAuditLog() {
@@ -403,6 +441,48 @@ document.addEventListener('DOMContentLoaded', () => {
                 demoLoader.style.display = "none";
             }
         });
+    }
+
+    // Fetch and render DB Explorer
+    async function fetchDbExplorer() {
+        if (!dbListBody) return;
+        dbListBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 2rem;">Loading database rows...</td></tr>';
+        
+        try {
+            const response = await fetch('/internal/db-explorer');
+            if (!response.ok) throw new Error("Failed to fetch database rows");
+            
+            const rows = await response.json();
+            
+            if (rows.length === 0) {
+                dbListBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">No profiles found.</td></tr>';
+                return;
+            }
+
+            dbListBody.innerHTML = '';
+            rows.forEach((row) => {
+                const tr = document.createElement('tr');
+                const profile = row.profile || {};
+                
+                // Extract specific keys for the flat table
+                const sdk = profile.sdk_version || 'N/A';
+                const device = profile.device_model || 'N/A';
+                const resolution = profile.known_resolution || 'N/A';
+                
+                tr.innerHTML = `
+                    <td class="mono-cell">${row.card_id_hash.substring(0, 16)}...</td>
+                    <td style="color: #93c5fd;">${sdk}</td>
+                    <td>${device}</td>
+                    <td>${resolution}</td>
+                `;
+                
+                dbListBody.appendChild(tr);
+            });
+
+        } catch (e) {
+            console.error("DB Explorer error:", e);
+            dbListBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #ef4444;">Failed to load database profiles.</td></tr>';
+        }
     }
 
 });
