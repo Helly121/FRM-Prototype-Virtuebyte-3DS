@@ -290,12 +290,19 @@ def parse_dt(dt_str) -> datetime:
         return datetime.now(timezone.utc)
 
 
-def cross_field_checks(payload: dict, profile: dict) -> dict:
+def cross_field_checks(payload: dict, profile: dict, blocklist_hits: list = None) -> dict:
     """
     Cross-field consistency checks producing additional surprise dimensions.
     These are added to TotalDeviation but NOT included in the IF vector.
     """
     checks = {}
+    
+    if blocklist_hits:
+        checks["s_global_blocklist"] = {
+            "score": 10.0 * len(blocklist_hits), # Severe penalty
+            "observed": f"Hit: {', '.join(blocklist_hits)}",
+            "expected": "No global blocklist matches",
+        }
 
     # 1. Clock skew (dateTime vs purchaseDate)
     device_dt = parse_dt(payload.get("dateTime"))
@@ -344,6 +351,7 @@ def cross_field_checks(payload: dict, profile: dict) -> dict:
     txn_year = float(payload.get("txnActivityYear", 0) or 0)
     txn_day = float(payload.get("txnActivityDay", 0) or 0)
     score = 0.0
+    daily_rate = 0.0
     if txn_year > 0:
         daily_rate = txn_year / 365
         if txn_day > max(3.0, daily_rate * 3):
@@ -471,7 +479,7 @@ def surprise_os_version(observed: str, freq_dict: dict) -> float:
 # Main Orchestrator — Extract & Score
 # ---------------------------------------------------------------------------
 
-def extract_and_score(payload: dict, profile: dict) -> tuple:
+def extract_and_score(payload: dict, profile: dict, blocklist_hits: list = None) -> tuple:
     """
     Compute the full 40-dimensional surprise vector and per-dimension
     contribution mapping.
@@ -667,11 +675,13 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
 
     # 21: s_acquirer_bin
     val = str(payload.get("acquirerBIN", ""))
-    s = surprise_known_unknown(val, mer.get("known_acquirer_bins", []))
+    bins = mer.get("known_acquirer_bins", {})
+    bins_list = list(bins.keys()) if isinstance(bins, dict) else bins
+    s = surprise_known_unknown(val, bins)
     surprise[21] = s
     contributions["s_acquirer_bin"] = {
         "score": s, "observed": val,
-        "expected": f"known set: {mer.get('known_acquirer_bins', [])[:3]}",
+        "expected": f"known set: {bins_list[:3]}",
     }
 
     # 22: s_ship_indicator
@@ -689,6 +699,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[23] = s
     contributions["s_billing_addr_hash"] = {
         "score": s, "observed": billing_hash[:12] + "...",
+        "raw_observed": billing_hash,
         "expected": f"{len(mer.get('billing_addr_hashes', []))} known addresses",
     }
 
@@ -698,6 +709,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[24] = s
     contributions["s_shipping_addr_hash"] = {
         "score": s, "observed": ship_hash[:12] + "...",
+        "raw_observed": ship_hash,
         "expected": f"{len(mer.get('shipping_addr_hashes', []))} known addresses",
     }
 
@@ -708,6 +720,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[25] = s
     contributions["s_email_hash"] = {
         "score": s, "observed": email[:20] if email else "empty",
+        "raw_observed": email_hash if email_hash else None,
         "expected": f"{len(mer.get('known_email_hashes', []))} known emails",
     }
 
@@ -718,6 +731,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[26] = s
     contributions["s_phone_hash"] = {
         "score": s, "observed": phone[-4:] if phone else "empty",
+        "raw_observed": phone_hash if phone_hash else None,
         "expected": f"{len(mer.get('known_phone_hashes', []))} known phones",
     }
 
@@ -772,18 +786,22 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     val = str(payload.get("TimeZone", payload.get("Time Zone", "")))
     s = surprise_known_unknown(val, dev.get("known_timezones", []))
     surprise[32] = s
+    tzs = dev.get("known_timezones", {})
+    tzs_list = list(tzs.keys()) if isinstance(tzs, dict) else tzs
     contributions["s_timezone"] = {
         "score": s, "observed": val,
-        "expected": f"known: {dev.get('known_timezones', [])}",
+        "expected": f"known: {tzs_list[:3]}",
     }
 
     # 33: s_screen_res
     val = str(payload.get("ScreenResolution", payload.get("Screen Resolution", "")))
     s = surprise_known_unknown(val, dev.get("known_resolutions", []))
     surprise[33] = s
+    res = dev.get("known_resolutions", {})
+    res_list = list(res.keys()) if isinstance(res, dict) else res
     contributions["s_screen_res"] = {
         "score": s, "observed": val,
-        "expected": f"known: {dev.get('known_resolutions', [])}",
+        "expected": f"known: {res_list[:3]}",
     }
 
     # 34: s_ip_subnet
@@ -791,9 +809,11 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     subnet = extract_ip_subnet(ip)
     s = surprise_known_unknown(subnet, dev.get("known_ip_subnets", []))
     surprise[34] = s
+    ips = dev.get("known_ip_subnets", {})
+    ips_list = list(ips.keys()) if isinstance(ips, dict) else ips
     contributions["s_ip_subnet"] = {
         "score": s, "observed": subnet,
-        "expected": f"known: {dev.get('known_ip_subnets', [])[:3]}",
+        "expected": f"known: {ips_list[:3]}",
     }
 
     # 35: s_gps_billing_dist (GPS vs device geo centroid)
@@ -823,6 +843,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
     surprise[36] = s
     contributions["s_app_package"] = {
         "score": s, "observed": app_hash[:12] + "..." if app_hash else "empty",
+        "raw_observed": app_hash if app_hash else None,
         "expected": f"{len(dev.get('known_app_packages', []))} known packages",
     }
 
@@ -862,7 +883,7 @@ def extract_and_score(payload: dict, profile: dict) -> tuple:
         surprise = surprise * shrinkage
 
     # ---- Cross-field checks ----
-    cf_scores = cross_field_checks(payload, profile)
+    cf_scores = cross_field_checks(payload, profile, blocklist_hits)
 
     return surprise, contributions, cf_scores
 

@@ -320,10 +320,13 @@ def build_report(
             except (KeyError, IndexError):
                 reason = f"{dim_name}: observed={observed}, expected={expected}"
 
+            raw_observed = detail.get("raw_observed")
+
             contributing_factors.append(ContributingFactor(
                 field=DIMENSION_TO_FIELD.get(dim_name, dim_name),
                 dimension=dim_name,
                 observed=str(observed),
+                raw_observed=str(raw_observed) if raw_observed is not None else None,
                 expected=str(expected),
                 contribution_pct=round(pct, 1),
                 reason=reason,

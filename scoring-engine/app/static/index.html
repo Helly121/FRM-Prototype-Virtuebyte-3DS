@@ -87,6 +87,14 @@
                             <div class="metric-value" id="val-latency">0 ms</div>
                         </div>
                     </div>
+                    
+                    <!-- Feedback Action -->
+                    <div class="feedback-action" id="feedback-section" style="display: none; margin-bottom: 20px; text-align: center;">
+                        <button id="btn-otp-success" class="primary-btn" style="background-color: #10b981;">
+                            ✅ Simulate OTP Success (Mark as Legit)
+                        </button>
+                        <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">This submits a ground-truth feedback loop, teaching the engine this behavior is normal.</p>
+                    </div>
 
                     <!-- Summary Statement -->
                     <div class="summary-box">
@@ -131,6 +139,43 @@
                             </tr>
                         </thead>
                         <tbody id="audit-table-body">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Dynamic Load Simulator Section -->
+    <div class="app-container" style="margin-top: 20px;">
+        <section class="panel glass-panel" style="width: 100%;">
+            <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2>Dynamic Dataset Load Simulator</h2>
+                    <p>Demonstrate real-time, concurrent dynamic learning on 50 live user profiles from the PostgreSQL dataset.</p>
+                </div>
+                <button id="btn-run-demo" class="primary-btn pulse" style="width: auto; padding: 0 20px;">
+                    <span class="btn-text">Run 50-User Simulation 🚀</span>
+                    <span class="loader" id="demo-loader" style="display: none;"></span>
+                </button>
+            </div>
+            <div id="demo-results-container" style="display: none; margin-top: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <span id="demo-time" style="color: #94a3b8; font-size: 0.9rem;"></span>
+                </div>
+                <div class="table-container">
+                    <table class="audit-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Card Hash (First 8)</th>
+                                <th>Transaction Type</th>
+                                <th>Risk Tier</th>
+                                <th>Total Deviation</th>
+                                <th>Latency (ms)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="demo-table-body">
                             <!-- Populated dynamically via JS -->
                         </tbody>
                     </table>

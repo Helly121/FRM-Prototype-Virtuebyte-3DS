@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scoreBtn = document.getElementById('score-btn');
     const loader = document.getElementById('score-loader');
     const btnText = document.querySelector('.btn-text');
+    let currentTxnId = null;
     
     // Tab DOM
     const btnSimulator = document.getElementById('tab-btn-simulator');
@@ -23,10 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const factorsList = document.getElementById('factors-list');
     const contextList = document.getElementById('context-list');
     const cardTier = document.getElementById('card-tier');
+    const feedbackSection = document.getElementById('feedback-section');
+    const btnOtpSuccess = document.getElementById('btn-otp-success');
 
     // Sample Payloads
     const normalPayload = {
-        "simulate_only": true,
+        "simulate_only": false,
         "card_id_hash": "00dd14b7deb88c381b2caae225819d34da20c27f81a2e807baaf0b4eb7153b5f",
         "acctType": "01",
         "mcc": "5411",
@@ -162,6 +165,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Toggle empty state
         emptyState.style.display = 'none';
         resultsContent.style.display = 'block';
+        
+        currentTxnId = report.transaction_id;
+        feedbackSection.style.display = 'block';
 
         // Update Top Metrics
         valTier.textContent = report.deviation_tier;
@@ -235,6 +241,43 @@ document.addEventListener('DOMContentLoaded', () => {
         // Capitalize first letter
         return formatted.charAt(0).toUpperCase() + formatted.slice(1);
     }
+    
+    // Feedback Logic
+    btnOtpSuccess.addEventListener('click', async () => {
+        if (!currentTxnId) return;
+        
+        const originalText = btnOtpSuccess.innerHTML;
+        btnOtpSuccess.innerHTML = "⏳ Submitting...";
+        btnOtpSuccess.disabled = true;
+        
+        try {
+            const response = await fetch('/internal/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    txn_id: currentTxnId,
+                    outcome: "confirmed_legit",
+                    source: "otp_success"
+                })
+            });
+            
+            if (!response.ok) throw new Error("Feedback failed");
+            
+            btnOtpSuccess.innerHTML = "✅ Feedback Submitted! (Score again to see learning loop)";
+            btnOtpSuccess.style.backgroundColor = "#059669"; // darker green
+            
+            setTimeout(() => {
+                btnOtpSuccess.innerHTML = originalText;
+                btnOtpSuccess.disabled = false;
+            }, 3000);
+            
+        } catch (e) {
+            console.error("Feedback error:", e);
+            alert("Failed to submit feedback.");
+            btnOtpSuccess.innerHTML = originalText;
+            btnOtpSuccess.disabled = false;
+        }
+    });
 
     // Tab Switching Logic
     btnSimulator.addEventListener('click', () => {
@@ -293,9 +336,73 @@ document.addEventListener('DOMContentLoaded', () => {
                 auditTableBody.appendChild(tr);
             });
 
-        } catch (err) {
-            console.error(err);
-            auditTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--status-high);">Error loading audit logs.</td></tr>';
+        } catch (e) {
+            console.error("Audit log error:", e);
+            auditTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #ef4444;">Failed to load audit logs.</td></tr>';
         }
     }
+
+    // Dynamic Load Simulator Logic
+    const btnRunDemo = document.getElementById('btn-run-demo');
+    const demoLoader = document.getElementById('demo-loader');
+    const demoResultsContainer = document.getElementById('demo-results-container');
+    const demoTableBody = document.getElementById('demo-table-body');
+    const demoTime = document.getElementById('demo-time');
+
+    if (btnRunDemo) {
+        btnRunDemo.addEventListener('click', async () => {
+            const btnText = btnRunDemo.querySelector('.btn-text');
+            btnRunDemo.disabled = true;
+            btnText.innerHTML = "Simulating 50 Users...";
+            demoLoader.style.display = "inline-block";
+            demoResultsContainer.style.display = "none";
+            
+            try {
+                const response = await fetch('/internal/demo-load-test', {
+                    method: 'POST',
+                });
+                
+                if (!response.ok) throw new Error("Simulation failed");
+                const data = await response.json();
+                
+                // Clear previous results
+                demoTableBody.innerHTML = '';
+                
+                // Populate table
+                data.results.forEach(res => {
+                    const row = document.createElement('tr');
+                    
+                    let tierColor = "#ef4444"; // HIGH
+                    if (res.tier === "LOW") tierColor = "#10b981";
+                    else if (res.tier === "MEDIUM") tierColor = "#f59e0b";
+                    
+                    let typeLabel = "Normal";
+                    if (res.type === "suspicious") typeLabel = "Suspicious";
+                    else if (res.type === "abnormal") typeLabel = "Abnormal";
+                    
+                    row.innerHTML = `
+                        <td style="font-family: monospace;">${res.card_id}</td>
+                        <td>${typeLabel}</td>
+                        <td style="color: ${tierColor}; font-weight: bold;">${res.tier}</td>
+                        <td style="font-family: monospace;">${res.score.toFixed(2)}</td>
+                        <td style="font-family: monospace; color: #94a3b8;">${res.latency.toFixed(1)} ms</td>
+                    `;
+                    demoTableBody.appendChild(row);
+                });
+                
+                // Show completion time
+                demoTime.innerHTML = `✅ Simulation completed in <strong>${data.total_time_sec} seconds</strong>.`;
+                demoResultsContainer.style.display = "block";
+                
+            } catch (e) {
+                console.error(e);
+                alert("Load simulation failed. Check backend logs.");
+            } finally {
+                btnRunDemo.disabled = false;
+                btnText.innerHTML = "Run 50-User Simulation 🚀";
+                demoLoader.style.display = "none";
+            }
+        });
+    }
+
 });

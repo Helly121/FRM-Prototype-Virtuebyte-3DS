@@ -148,10 +148,11 @@ class AReqPayload(BaseModel):
 
 
 class ContributingFactor(BaseModel):
-    """A single field-level deviation contributing to the overall score."""
+    """Details on why a specific dimension flagged as anomalous."""
     field: str = Field(..., description="Dotted field path (e.g., device.Platform)")
     dimension: str = Field(..., description="Surprise dimension name (e.g., s_platform)")
     observed: Any = Field(..., description="Observed value in this transaction")
+    raw_observed: Optional[str] = Field(None, description="Untruncated value used internally for feedback loops")
     expected: str = Field(..., description="Expected value/range from profile history")
     contribution_pct: float = Field(..., description="Percentage of TotalDeviation")
     reason: str = Field(..., description="Human-readable explanation")
@@ -178,3 +179,12 @@ class DeviationReport(BaseModel):
         json_encoders = {
             float: lambda v: round(v, 4),
         }
+
+
+class FeedbackPayload(BaseModel):
+    """
+    Payload for ground-truth feedback (OTP success, chargeback, analyst review).
+    """
+    txn_id: str = Field(..., description="The transaction ID that was previously scored")
+    outcome: str = Field(..., description="'confirmed_legit', 'confirmed_fraud', or 'chargeback'")
+    source: str = Field(..., description="'otp_success', 'analyst_review', or 'chargeback_file'")

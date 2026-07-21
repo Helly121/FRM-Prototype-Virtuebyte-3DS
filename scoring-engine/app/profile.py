@@ -465,12 +465,31 @@ def _increment_freq(section: dict, field_name: str,
 
 def _add_to_bounded_set(section: dict, field_name: str,
                         value: str, max_size: int):
-    """Add a value to a bounded set (list), evicting oldest if full."""
-    s = section.get(field_name, [])
-    if value not in s:
+    """Add a value to a bounded set (dict), evicting lowest decayed freq if full."""
+    if not value:
+        return
+    s = section.get(field_name, {})
+    # Handle legacy lists by converting them to dicts
+    if isinstance(s, list):
+        new_s = {}
+        for item in s:
+            new_s[item] = {"freq": 1.0, "last_seen": now_ts()}
+        s = new_s
+        
+    ts = now_ts()
+    if value in s:
+        s[value]["freq"] += 1.0
+        s[value]["last_seen"] = ts
+    else:
         if len(s) >= max_size:
-            s.pop(0)  # Evict oldest (FIFO)
-        s.append(value)
+            # Decay since last_seen isn't rigorously applied here without half-life,
+            # but we can approximate or use a simple decay factor based on days.
+            def score(kv):
+                days = (ts - kv[1]["last_seen"]) / 86400.0
+                return kv[1]["freq"] * (0.5 ** (days / 30.0)) # 30-day half-life approx
+            weakest = min(s.items(), key=score)
+            del s[weakest[0]]
+        s[value] = {"freq": 1.0, "last_seen": ts}
     section[field_name] = s
 
 

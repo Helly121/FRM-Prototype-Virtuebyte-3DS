@@ -31,7 +31,7 @@ def main():
             check=True
         )
         print("\n==========================================================")
-        print("✅ Database started successfully on port 5432!")
+        print("Database started successfully on port 5432!")
         print("==========================================================")
         print("\nKeep this window open to keep the database running.")
         print("\nTo connect your Uvicorn server, open a DIFFERENT terminal and run:")
