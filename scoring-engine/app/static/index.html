@@ -3,219 +3,278 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3DS Anomaly Detection MVP</title>
+    <title>VirtueByte 3DS Fraud Analytics</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <!-- Sidebar Navigation -->
-    <aside class="sidebar">
-        <div class="logo-container">
-            <div class="logo-icon"></div>
-            <h1>3DS Anomaly Detection</h1>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <aside class="sidebar" aria-label="Primary navigation">
+        <div class="brand-block">
+            <div class="brand-mark" aria-hidden="true">VB</div>
+            <div>
+                <p class="eyebrow">VirtueByte 3DS</p>
+                <h1>Fraud Analytics</h1>
+            </div>
         </div>
-        
-        <nav class="sidebar-menu">
-            <button class="menu-item active" id="tab-btn-db">PostgreSQL Profile Explorer</button>
-            <button class="menu-item" id="tab-btn-demo">Dynamic Dataset Load Simulator</button>
-            <button class="menu-item" id="tab-btn-simulator">Transaction Simulator</button>
-            <button class="menu-item" id="tab-btn-audit">Audit Log</button>
+
+        <nav class="sidebar-menu" aria-label="Dashboard sections">
+            <button class="menu-item active" id="tab-btn-db" type="button">
+                <span class="menu-icon" aria-hidden="true">DB</span>
+                <span>Profile Explorer</span>
+            </button>
+            <button class="menu-item" id="tab-btn-simulator" type="button">
+                <span class="menu-icon" aria-hidden="true">TX</span>
+                <span>Transaction Simulator</span>
+            </button>
+            <button class="menu-item" id="tab-btn-demo" type="button">
+                <span class="menu-icon" aria-hidden="true">50</span>
+                <span>Load Simulator</span>
+            </button>
+            <button class="menu-item" id="tab-btn-audit" type="button">
+                <span class="menu-icon" aria-hidden="true">AU</span>
+                <span>Audit Log</span>
+            </button>
         </nav>
-        
-        <div class="sidebar-footer">
-            <a href="/docs" target="_blank" class="nav-link">
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5z"/><path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0v-5z"/></svg>
-                API Documentation
-            </a>
+
+        <div class="sidebar-status" aria-label="System status">
+            <span class="status-dot" aria-hidden="true"></span>
+            <div>
+                <strong>Scoring engine</strong>
+                <span>Ready for real-time checks</span>
+            </div>
         </div>
+
+        <a href="/docs" target="_blank" rel="noreferrer" class="docs-link">
+            <span aria-hidden="true">API</span>
+            <span>API Documentation</span>
+        </a>
     </aside>
 
-    <!-- Main Content Area -->
-    <main class="main-layout">
-        <!-- Top Header -->
+    <main class="main-layout" id="main-content">
         <header class="topbar">
-            <div class="breadcrumbs" id="breadcrumbs">
-                Database / <span class="active" id="breadcrumb-active">Profile Explorer</span>
+            <div>
+                <p class="breadcrumbs">Dashboard / <span id="breadcrumb-active">Profile Explorer</span></p>
+                <h2>3DS risk intelligence console</h2>
             </div>
-            <div class="topbar-actions">
-                <div class="search-bar" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.85rem; color: #9ca3af; border: 1px solid rgba(255,255,255,0.1);">
-                    Search...
+            <div class="topbar-actions" aria-label="Dashboard context">
+                <div class="context-pill">
+                    <span class="context-label">Environment</span>
+                    <strong>Prototype</strong>
                 </div>
-                <div class="user-avatar"></div>
+                <div class="context-pill">
+                    <span class="context-label">Mode</span>
+                    <strong>Live API</strong>
+                </div>
             </div>
         </header>
-        
+
         <div class="content-area">
-            
-            <!-- DB EXPLORER VIEW -->
-            <section class="view-section active" id="tab-db">
-                <div class="panel" style="display: flex; flex-direction: column; height: 100%;">
-                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
-                        <div>
-                            <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">PostgreSQL Profile Explorer</h2>
-                            <p style="color: #9ca3af; font-size: 0.9rem;">Inspect raw machine learning profiles and baseline features updated in real-time.</p>
+            <section class="view-section active" id="tab-db" aria-labelledby="db-title">
+                <div class="dashboard-grid db-grid">
+                    <article class="panel panel-fill">
+                        <div class="panel-header split-header">
+                            <div>
+                                <p class="section-kicker">PostgreSQL profiles</p>
+                                <h3 id="db-title">Profile Explorer</h3>
+                                <p>Inspect stored card behavior baselines used by the scoring engine.</p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-refresh-db" type="button">
+                                <span aria-hidden="true">Refresh</span>
+                                <span>Refresh Data</span>
+                            </button>
                         </div>
-                        <button id="btn-refresh-db" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-                            <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/></svg>
-                            Refresh Data
-                        </button>
-                    </div>
-                    
-                    <div style="margin-top: 2rem; overflow-x: auto;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Card Hash (ID)</th>
-                                    <th>SDK Version</th>
-                                    <th>Device Model</th>
-                                    <th>Known Resolution</th>
-                                </tr>
-                            </thead>
-                            <tbody id="db-list-body">
-                                <!-- Populated dynamically -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="display: flex; justify-content: flex-end; margin-top: 1rem; color: #9ca3af; font-size: 0.85rem;">
-                        <span>Rows per page: 50 &nbsp; | &nbsp; 1-50 of 50 &nbsp; &lt; &gt;</span>
-                    </div>
-                </div>
-                <!-- Hide legacy details view to avoid errors in script.js -->
-                <div id="db-viewer-title" style="display: none;"></div>
-                <div id="db-json-content" style="display: none;"></div>
-            </section>
-            
-            <!-- DYNAMIC LOAD SIMULATOR VIEW -->
-            <section class="view-section" id="tab-demo">
-                <div class="panel">
-                    <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">Dynamic Dataset Load Simulator</h2>
-                            <p style="color: #9ca3af; font-size: 0.9rem;">Demonstrate real-time, concurrent dynamic learning on 50 live user profiles from the PostgreSQL dataset.</p>
+
+                        <div class="table-toolbar" aria-label="Profile table details">
+                            <span>Card fingerprints and device signals</span>
+                            <span>Rows refresh from <code>/internal/db-explorer</code></span>
                         </div>
-                        <button id="btn-run-demo" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
-                            <span class="btn-text">Run 50-User Simulation 🚀</span>
-                            <span class="loader" id="demo-loader" style="display: none;"></span>
-                        </button>
-                    </div>
-                    <div id="demo-results-container" style="display: none; margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                            <span id="demo-time" style="color: #10b981; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem;"></span>
-                        </div>
+
                         <div class="table-container">
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Card Hash (First 8)</th>
-                                        <th>Transaction Type</th>
-                                        <th>Risk Tier</th>
-                                        <th>Total Deviation</th>
-                                        <th>Latency</th>
+                                        <th scope="col">Card Hash</th>
+                                        <th scope="col">SDK Version</th>
+                                        <th scope="col">Device Model</th>
+                                        <th scope="col">Known Resolution</th>
                                     </tr>
                                 </thead>
-                                <tbody id="demo-table-body">
-                                </tbody>
+                                <tbody id="db-list-body"></tbody>
                             </table>
                         </div>
-                    </div>
+                    </article>
+
+                    <aside class="insight-rail" aria-label="Profile explorer summary">
+                        <div class="stat-card">
+                            <span class="stat-label">Data source</span>
+                            <strong>PostgreSQL</strong>
+                            <span class="stat-note">ML profile baselines</span>
+                        </div>
+                        <div class="stat-card">
+                            <span class="stat-label">Primary key</span>
+                            <strong>Card hash</strong>
+                            <span class="stat-note">Anonymized identifier</span>
+                        </div>
+                        <div class="stat-card accent-card">
+                            <span class="stat-label">Use case</span>
+                            <strong>Baseline review</strong>
+                            <span class="stat-note">Verify profile learning state</span>
+                        </div>
+                    </aside>
+                </div>
+                <div id="db-viewer-title" class="visually-hidden"></div>
+                <div id="db-json-content" class="visually-hidden"></div>
+            </section>
+
+            <section class="view-section" id="tab-simulator" aria-labelledby="simulator-title">
+                <div class="simulator-view-grid">
+                    <article class="panel simulator-input-panel">
+                        <div class="panel-header">
+                            <p class="section-kicker">AReq simulation</p>
+                            <h3 id="simulator-title">Transaction Simulator</h3>
+                            <p>Submit an EMV 3-D Secure authentication request and review the model response.</p>
+                        </div>
+
+                        <div class="controls" aria-label="Payload presets">
+                            <button class="preset-btn active" id="btn-normal" type="button">Normal Txn</button>
+                            <button class="preset-btn" id="btn-anomaly" type="button">Anomalous Txn</button>
+                        </div>
+
+                        <div class="editor-container">
+                            <label for="payload-editor">JSON Payload</label>
+                            <textarea id="payload-editor" spellcheck="false" autocomplete="off" aria-describedby="payload-help"></textarea>
+                            <p class="field-help" id="payload-help">Payload shape is sent unchanged to the scoring API.</p>
+                        </div>
+
+                        <button class="btn btn-primary btn-block" id="score-btn" type="button">
+                            <span class="btn-text">Score Transaction</span>
+                            <span class="loader" id="score-loader" style="display: none;" aria-hidden="true"></span>
+                        </button>
+                    </article>
+
+                    <article class="panel results-panel" aria-live="polite">
+                        <div class="panel-header">
+                            <p class="section-kicker">Isolation Forest result</p>
+                            <h3>Real-Time Risk Analysis</h3>
+                            <p>Model score, contributing factors, and feedback loop controls.</p>
+                        </div>
+
+                        <div class="empty-state" id="results-empty">
+                            <div class="empty-icon" aria-hidden="true"></div>
+                            <h4>No transaction scored yet</h4>
+                            <p>Submit a payload to populate the risk report.</p>
+                        </div>
+
+                        <div class="results-content" id="results-content" style="display: none;">
+                            <div class="metrics-grid">
+                                <div class="metric-card" id="card-tier">
+                                    <span class="metric-label">Risk Tier</span>
+                                    <strong class="metric-value badge" id="val-tier">LOW</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Total Deviation</span>
+                                    <strong class="metric-value mono" id="val-deviation">0.00</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Model Trust</span>
+                                    <strong class="metric-value mono" id="val-ifscore">0.00</strong>
+                                </div>
+                                <div class="metric-card">
+                                    <span class="metric-label">Latency</span>
+                                    <strong class="metric-value mono" id="val-latency">0 ms</strong>
+                                </div>
+                            </div>
+
+                            <div class="summary-box" id="val-summary"></div>
+
+                            <div class="feedback-section" id="feedback-section" style="display: none;">
+                                <button class="btn btn-success" id="btn-otp-success" type="button">Simulate OTP Success</button>
+                                <p>This submits ground-truth feedback that marks the behavior as legitimate.</p>
+                            </div>
+
+                            <section class="factors-section" aria-labelledby="factors-title">
+                                <h4 id="factors-title">Contributing factors</h4>
+                                <div class="factors-list" id="factors-list"></div>
+                            </section>
+
+                            <section class="context-section" aria-labelledby="context-title">
+                                <h4 id="context-title">Non-contributing context</h4>
+                                <ul class="context-list" id="context-list"></ul>
+                            </section>
+                        </div>
+                    </article>
                 </div>
             </section>
 
-            <!-- TRANSACTION SIMULATOR VIEW -->
-            <section class="view-section" id="tab-simulator">
-                <div class="simulator-view-grid">
-                    <!-- Left Pane: Input -->
-                    <div class="panel">
-                        <div class="panel-header">
-                            <h2>Transaction Simulator</h2>
-                            <p>Simulate an EMV 3-D Secure Authentication Request (AReq).</p>
+            <section class="view-section" id="tab-demo" aria-labelledby="demo-title">
+                <article class="panel panel-fill">
+                    <div class="panel-header split-header">
+                        <div>
+                            <p class="section-kicker">Concurrent scoring</p>
+                            <h3 id="demo-title">Dynamic Dataset Load Simulator</h3>
+                            <p>Run the 50-user demonstration against live dataset profiles.</p>
                         </div>
-                        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                            <button id="btn-normal" style="background: transparent; border: 1px solid #333; color: #fff; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Normal Txn</button>
-                            <button id="btn-anomaly" style="background: transparent; border: 1px solid #333; color: #fff; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">Anomalous Txn</button>
-                        </div>
-                        <div style="display: flex; flex-direction: column; flex: 1;">
-                            <label for="payload-editor" style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 0.5rem;">JSON Payload</label>
-                            <textarea id="payload-editor" spellcheck="false" style="flex: 1; min-height: 300px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 1rem; color: #93c5fd; font-family: monospace; resize: none;"></textarea>
-                        </div>
-                        <button id="score-btn" style="background: #3b82f6; color: white; border: none; padding: 1rem; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 1.5rem; display: flex; justify-content: center;">
-                            <span class="btn-text">Score Transaction</span>
-                            <span class="loader" id="score-loader" style="display: none;"></span>
+                        <button class="btn btn-primary" id="btn-run-demo" type="button">
+                            <span class="btn-text">Run 50-User Simulation</span>
+                            <span class="loader" id="demo-loader" style="display: none;" aria-hidden="true"></span>
                         </button>
                     </div>
 
-                    <!-- Right Pane: Results -->
-                    <div class="panel results-panel">
-                        <div class="panel-header">
-                            <h2>Real-Time Risk Analysis</h2>
-                            <p>Evaluation generated by the Isolation Forest model.</p>
-                        </div>
-                        <div id="results-empty" style="text-align: center; margin-top: 4rem; color: #9ca3af;">
-                            <p>Submit a transaction to view the real-time deviation report.</p>
-                        </div>
-                        <div id="results-content" style="display: none;">
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
-                                    <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Risk Tier</div>
-                                    <div id="val-tier" style="font-size: 1.5rem; font-weight: bold;" class="badge">LOW</div>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
-                                    <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Total Deviation</div>
-                                    <div id="val-deviation" style="font-size: 1.5rem; font-family: monospace;">0.00</div>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
-                                    <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Model Trust</div>
-                                    <div id="val-ifscore" style="font-size: 1.5rem; font-family: monospace;">0.00</div>
-                                </div>
-                                <div style="background: rgba(255,255,255,0.03); padding: 1rem; border-radius: 8px;">
-                                    <div style="font-size: 0.75rem; color: #9ca3af; text-transform: uppercase;">Latency</div>
-                                    <div id="val-latency" style="font-size: 1.5rem; font-family: monospace;">0 ms</div>
-                                </div>
-                            </div>
-                            
-                            <div id="feedback-section" style="display: none; margin-bottom: 20px; text-align: center;">
-                                <button id="btn-otp-success" style="background: #10b981; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;">
-                                    ✅ Simulate OTP Success (Mark as Legit)
-                                </button>
-                                <p style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">This submits a ground-truth feedback loop, teaching the engine this behavior is normal.</p>
-                            </div>
-                            
-                            <!-- Hidden elements expected by script.js -->
-                            <div id="val-summary" style="display: none;"></div>
-                            <ul id="factors-list" style="display: none;"></ul>
-                            <ul id="context-list" style="display: none;"></ul>
-                            <div id="card-tier" style="display: none;"></div>
+                    <div class="demo-results" id="demo-results-container" style="display: none;">
+                        <div class="success-banner" id="demo-time"></div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Card Hash</th>
+                                        <th scope="col">Transaction Type</th>
+                                        <th scope="col">Risk Tier</th>
+                                        <th scope="col">Total Deviation</th>
+                                        <th scope="col">Latency</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="demo-table-body"></tbody>
+                            </table>
                         </div>
                     </div>
-                </div>
+                </article>
             </section>
 
-            <!-- AUDIT LOG VIEW -->
-            <section class="view-section" id="tab-audit">
-                <div class="panel">
-                    <div class="panel-header">
-                        <h2 style="font-size: 1.5rem; margin-bottom: 0.25rem;">Audit Log</h2>
-                        <p style="color: #9ca3af; font-size: 0.9rem;">Historical scored transactions.</p>
+            <section class="view-section" id="tab-audit" aria-labelledby="audit-title">
+                <article class="panel panel-fill">
+                    <div class="panel-header split-header">
+                        <div>
+                            <p class="section-kicker">Scored history</p>
+                            <h3 id="audit-title">Audit Log</h3>
+                            <p>Review historical transactions returned by the audit API.</p>
+                        </div>
+                        <div class="mini-legend" aria-label="Risk legend">
+                            <span><i class="legend-dot low"></i>Low</span>
+                            <span><i class="legend-dot medium"></i>Medium</span>
+                            <span><i class="legend-dot high"></i>High</span>
+                        </div>
                     </div>
-                    <table class="data-table" style="margin-top: 1rem;">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Txn ID</th>
-                                <th>Card Hash</th>
-                                <th>Risk Tier</th>
-                                <th>Deviation</th>
-                            </tr>
-                        </thead>
-                        <tbody id="audit-table-body">
-                            <!-- Populated dynamically -->
-                        </tbody>
-                    </table>
-                </div>
-            </section>
 
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Transaction ID</th>
+                                    <th scope="col">Card Hash</th>
+                                    <th scope="col">Scored At</th>
+                                    <th scope="col">Risk Tier</th>
+                                    <th scope="col">Model Trust</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-table-body"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </section>
         </div>
     </main>
 

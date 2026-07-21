@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editor = document.getElementById('payload-editor');
     const scoreBtn = document.getElementById('score-btn');
     const loader = document.getElementById('score-loader');
-    const btnText = document.querySelector('.btn-text');
+    const btnText = scoreBtn.querySelector('.btn-text');
     let currentTxnId = null;
     
     // Tab DOM
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentTxnId) return;
         
         const originalText = btnOtpSuccess.innerHTML;
-        btnOtpSuccess.innerHTML = "⏳ Submitting...";
+        btnOtpSuccess.innerHTML = "Submitting...";
         btnOtpSuccess.disabled = true;
         
         try {
@@ -269,7 +269,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (!response.ok) throw new Error("Feedback failed");
             
-            btnOtpSuccess.innerHTML = "✅ Feedback Submitted! (Score again to see learning loop)";
+            btnOtpSuccess.innerHTML = "Feedback submitted. Score again to see the learning loop.";
             btnOtpSuccess.style.backgroundColor = "#059669"; // darker green
             
             setTimeout(() => {
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 // Show completion time
-                demoTime.innerHTML = `✅ Simulation completed in <strong>${data.total_time_sec} seconds</strong>.`;
+                demoTime.innerHTML = `Simulation completed in <strong>${data.total_time_sec} seconds</strong>.`;
                 demoResultsContainer.style.display = "block";
                 
             } catch (e) {
@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert("Load simulation failed. Check backend logs.");
             } finally {
                 btnRunDemo.disabled = false;
-                btnText.innerHTML = "Run 50-User Simulation 🚀";
+                btnText.innerHTML = "Run 50-User Simulation";
                 demoLoader.style.display = "none";
             }
         });
