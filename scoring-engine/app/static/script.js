@@ -54,13 +54,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sample Payloads
     const normalPayload = {
         "simulate_only": false,
-        "card_id_hash": "00dd14b7deb88c381b2caae225819d34da20c27f81a2e807baaf0b4eb7153b5f",
+        "force_profile_update": true, // Force update for demo visibility
+        "card_id_hash": "a9d188e4884d9e49506e2ed8c56c7017dc17b62fb90234a9efdf2ef45b206775",
         "acctType": "01",
         "mcc": "5411",
         "merchantCountryCode": "356",
-        "purchaseAmount": 1000.0,
+        "purchaseAmount": 1500.0,
         "purchaseCurrency": "356",
-        "purchaseDate": "2026-07-15T13:30:00+05:30",  // Wednesday, 1:30 PM (historically common)
+        "purchaseDate": "2026-07-15T14:30:00+05:30",
         "cardSecurityCodeStatus": "01",
         "threeDSRequestorID": "REQ0001",
         "threeDSRequestorName": "Amazon India",
@@ -90,13 +91,13 @@ document.addEventListener('DOMContentLoaded', () => {
         "sdkInterface": "03",
         "sdkUiType": "01",
         "Platform": "Android",
-        "DeviceModel": "Samsung Galaxy A34",
+        "DeviceModel": "Samsung Galaxy S23",
         "OSName": "Android",
         "OSVersion": "14",
         "Locale": "en_IN",
         "TimeZone": "Asia/Kolkata",
         "ScreenResolution": "1080x2340",
-        "DeviceName": "Android_Samsung_Galaxy_A34",
+        "DeviceName": "Android_Samsung_Galaxy_S23",
         "IPAddress": "192.168.1.100",
         "Latitude": 18.52,
         "Longitude": 73.85,
@@ -182,6 +183,11 @@ document.addEventListener('DOMContentLoaded', () => {
             btnText.style.display = 'block';
             loader.style.display = 'none';
             scoreBtn.disabled = false;
+            
+            // Auto-refresh Profile Explorer so the dynamic update is instantly visible
+            if (typeof fetchDbExplorer === 'function') {
+                fetchDbExplorer();
+            }
         }
     });
 
@@ -436,13 +442,48 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (res.type === "suspicious") typeLabel = "Suspicious";
                     else if (res.type === "abnormal") typeLabel = "Abnormal";
                     
+                    let factorsHtml = '';
+                    if (res.factors && res.factors.length > 0) {
+                        factorsHtml = res.factors.map(f => 
+                            `<span style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; margin-right: 4px; border: 1px solid rgba(255,255,255,0.1); display: inline-block; margin-bottom: 2px; text-transform: capitalize;">${f.field} (${f.pct.toFixed(0)}%)</span>`
+                        ).join('');
+                    } else {
+                        factorsHtml = '<span style="color: #64748b; font-size: 0.8rem;">None</span>';
+                    }
+                    
                     row.innerHTML = `
                         <td style="font-family: monospace;">${res.card_id}</td>
                         <td>${typeLabel}</td>
                         <td style="color: ${tierColor}; font-weight: bold;">${res.tier}</td>
                         <td style="font-family: monospace;">${res.score.toFixed(2)}</td>
+                        <td>${factorsHtml}</td>
                         <td style="font-family: monospace; color: #94a3b8;">${res.latency.toFixed(1)} ms</td>
                     `;
+                    row.style.cursor = "pointer";
+                    row.addEventListener('mouseenter', () => row.style.backgroundColor = 'rgba(255,255,255,0.05)');
+                    row.addEventListener('mouseleave', () => row.style.backgroundColor = 'transparent');
+                    
+                    row.addEventListener('click', () => {
+                        const modalTitle = document.getElementById('modal-title');
+                        const modalContent = document.getElementById('modal-content');
+                        if (profileModal && modalTitle && modalContent) {
+                            modalTitle.innerText = `Simulated Transaction (Tier: ${res.tier})`;
+                            
+                            const displayData = {
+                                "Risk Summary": {
+                                    "Risk_Tier": res.tier,
+                                    "Total_Deviation": res.score.toFixed(2),
+                                    "Latency": res.latency.toFixed(1) + ' ms'
+                                },
+                                "Contributing Factors": res.full_factors,
+                                "Raw Payload": res.raw_payload
+                            };
+                            
+                            modalContent.innerHTML = generateCleanHTML(displayData);
+                            profileModal.style.display = 'flex';
+                        }
+                    });
+                    
                     demoTableBody.appendChild(row);
                 });
                 

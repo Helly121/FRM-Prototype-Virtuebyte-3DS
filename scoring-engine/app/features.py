@@ -45,7 +45,7 @@ from .weights import (
 def surprise_categorical(observed: str, freq_dict: dict,
                          alpha: float = LAPLACE_ALPHA) -> float:
     """
-    Returns surprise in bits. 0 = perfectly expected. ~3–5 = never seen before.
+    Returns surprise in bits. 0 = perfectly expected. ~3-5 = never seen before.
     
     Applied to: acctType, mcc, merchantCountryCode, purchaseCurrency,
     threeDSRequestorAuthenticationInd, threeDSReqAuthMethod, shipIndicator,
@@ -53,6 +53,11 @@ def surprise_categorical(observed: str, freq_dict: dict,
     """
     if not freq_dict:
         return 0.0  # No history — can't compute surprise
+        
+    # Prevent Laplace smoothing from artificially flagging the exact baseline behavior
+    if observed == max(freq_dict, key=freq_dict.get):
+        return 0.0
+        
     total = sum(freq_dict.values()) + alpha * max(len(freq_dict), 1)
     p_hat = (freq_dict.get(observed, 0.0) + alpha) / total
     return -math.log2(max(p_hat, 1e-12))

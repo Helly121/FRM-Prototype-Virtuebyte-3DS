@@ -805,12 +805,21 @@ async def run_demo_load_test(background_tasks: BackgroundTasks):
             # Pass the FastAPI background_tasks object to the scoring engine!
             report = await score(payload_obj, background_tasks)
             t1 = time.time()
+            
+            factors = []
+            for f in report.contributing_factors[:2]:
+                dim_name = f.dimension.replace('s_', '').replace('_', ' ')
+                factors.append({"field": dim_name, "pct": f.contribution_pct})
+                
             return {
                 "card_id": payload_obj.card_id_hash,
                 "type": tx_type,
                 "tier": report.deviation_tier,
                 "score": round(report.total_deviation, 2),
-                "latency": round((t1 - t0) * 1000, 1)
+                "factors": factors,
+                "latency": round((t1 - t0) * 1000, 1),
+                "raw_payload": payload_obj.model_dump(),
+                "full_factors": [f.model_dump() for f in report.contributing_factors]
             }
             
         coros = [process_task(t, p) for t, p in tasks]
