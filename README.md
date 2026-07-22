@@ -78,19 +78,30 @@ docker-compose up --build
 This single command spins up PostgreSQL, the Node.js API Gateway, and the FastAPI Scoring Engine.
 
 ### Running Locally (Without Docker)
-If you prefer to run the components natively on your machine:
-1. Start your local PostgreSQL server (e.g., using `pg_ctl`, Windows Services, or the `pgserver` Python package if you prefer).
-2. Set the `PG_DSN` environment variable to point to your database. For example (in PowerShell):
+If you prefer to run the components natively on your machine, we have provided an automated pipeline to handle database creation, dataset generation, and model training:
+
+1. **Start the Embedded PostgreSQL Server**:
+   ```bash
+   python start_db.py
+   ```
+   *Keep this terminal window open! It runs a localized instance of PostgreSQL using `pgserver` so you don't need system-wide installations.*
+
+2. **Open a NEW Terminal and Set the Database URL**:
+   For example, in PowerShell:
    ```powershell
-   $env:PG_DSN="postgresql://postgres:password@127.0.0.1:5432/postgres"
+   $env:PG_DSN="postgresql://postgres:@127.0.0.1:5432/postgres"
    ```
-3. Ensure you have run the dataset generation script to seed the database with synthetic profiles:
+
+3. **Run the Full Offline Pipeline**:
+   If this is your first time starting the project, you need to generate the synthetic dataset, bootstrap the profiles, and train the Machine Learning model:
    ```bash
-   python scripts/generate_dataset.py
+   python scripts/run_pipeline.py
    ```
-4. Start the FastAPI server (from within the `scoring-engine` directory): 
+   *(This sequentially runs the dataset generation, profile bootstrapping, surprise vector computation, and model training.)*
+
+4. **Start the FastAPI Scoring Engine**:
    ```bash
-   python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+   python -m uvicorn scoring-engine.app.main:app --host 127.0.0.1 --port 8000 --reload
    ```
 
 ## Presentation Dashboard
