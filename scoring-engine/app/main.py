@@ -421,7 +421,7 @@ async def score(payload: AReqPayload, background_tasks: BackgroundTasks):
     )
 
     # 5. Fire background tasks
-    if not payload.simulate_only and report.deviation_tier == "LOW":
+    if not payload.simulate_only and (report.deviation_tier == "LOW" or payload.force_profile_update):
         background_tasks.add_task(
             background_update_profile,
             card_id_hash,
@@ -463,21 +463,30 @@ async def get_audit_log(limit: int = 50):
         raise HTTPException(status_code=500, detail="Database query failed")
 
 @app.get("/internal/db-explorer", summary="Fetch database profiles")
-async def get_db_explorer(limit: int = 50):
+async def get_db_explorer(limit: int = 50, offset: int = 0, search: str | None = None):
     """Fetch raw profiles from PostgreSQL for database explorer."""
     if not pg_pool:
         raise HTTPException(status_code=503, detail="Database not connected")
     try:
         async with pg_pool.acquire() as conn:
-            rows = await conn.fetch(
+            if search and search.strip():
+                query = """
+                SELECT card_id_hash, profile, created_at, updated_at, version
+                FROM card_profiles
+                WHERE card_id_hash ILIKE $1
+                ORDER BY updated_at DESC
+                LIMIT $2 OFFSET $3
                 """
+                rows = await conn.fetch(query, f"%{search.strip()}%", limit, offset)
+            else:
+                query = """
                 SELECT card_id_hash, profile, created_at, updated_at, version
                 FROM card_profiles
                 ORDER BY updated_at DESC
-                LIMIT $1
-                """,
-                limit
-            )
+                LIMIT $1 OFFSET $2
+                """
+                rows = await conn.fetch(query, limit, offset)
+            
             import json
             results = []
             for row in rows:
@@ -690,39 +699,60 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 async def serve_ui():
     """Serve the Presentation Dashboard UI."""
     return FileResponse(str(static_dir / "index.html"))
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    """Return an empty response for favicon requests to prevent 404 logs."""
+    from fastapi.responses import Response
+    return Response(content=b"", media_type="image/x-icon", status_code=204)
 @app.post("/internal/demo-load-test", summary="Run dynamic dataset load simulator")
-async def run_demo_load_test():
+async def run_demo_load_test(background_tasks: BackgroundTasks):
     """Runs a 50-user load simulation dynamically."""
-    import json, time, asyncio
+    import json, time, asyncio, random
     from datetime import datetime, timezone
     from .schemas import AReqPayload
-    from fastapi import BackgroundTasks, HTTPException
+    from fastapi import HTTPException
     
     try:
         if not pg_pool:
             raise HTTPException(status_code=503, detail="Database not connected")
         
         async with pg_pool.acquire() as conn:
-            rows = await conn.fetch("SELECT card_id_hash, profile FROM card_profiles LIMIT 50")
+            rows = await conn.fetch("SELECT card_id_hash, profile FROM card_profiles ORDER BY random() LIMIT 50")
+            
+        tasks = []
+        start_total = time.time()
         
         def extract_top_key(freq_dict, default):
             if not freq_dict: return default
             return max(freq_dict.items(), key=lambda x: x[1])[0]
 
-        tasks = []
-        start_total = time.time()
+        MCCS = ["5411", "5812", "5912", "5541", "4121", "4814", "5999", "5732"]
+        COUNTRIES = ["356", "840", "826", "036", "124", "156"]
+        CURRENCIES = ["356", "840", "826", "036", "124", "156"]
+        DEVICES = ["Samsung Galaxy S23", "iPhone 14", "Pixel 7", "iPhone 15 Pro", "OnePlus 11"]
+        PLATFORMS = ["Android", "iOS", "Windows", "macOS"]
         
+        import math
         for i, row in enumerate(rows):
             card_id = row["card_id_hash"]
             profile = json.loads(row["profile"]) if isinstance(row["profile"], str) else row["profile"]
             
             txn = profile.get("transaction", {})
             dev = profile.get("device", {})
-            amount = float(txn.get("amount_ewma", 1000.0))
-            if amount < 10: amount = 1000.0
+            
+            amount_log = float(txn.get("amount_ewma_log", 0.0))
+            if amount_log > 0:
+                amount = math.exp(amount_log)
+            else:
+                amount = random.uniform(50.0, 2000.0)
+            
+            # Add very small randomness to normal amount to keep it LOW risk
+            amount = amount * random.uniform(0.95, 1.05)
             
             payload_dict = {
-                "simulate_only": True,
+                "simulate_only": False, # Dynamic Updating Enabled!
+                "force_profile_update": True, # Force update even if MEDIUM/HIGH for demo visibility
                 "card_id_hash": card_id,
                 "acctType": extract_top_key(txn.get("acct_type_freq", {}), "01"),
                 "mcc": extract_top_key(txn.get("mcc_freq", {}), "5411"),
@@ -744,38 +774,39 @@ async def run_demo_load_test():
                 "nbPurchaseAccount": 10,
                 "shipIndicator": "01",
                 "cardSecurityCodeStatus": "01",
-                "IPAddress": "192.168.1.100",
+                "IPAddress": extract_top_key(dev.get("ip_subnet_freq", {}), "192.168.1.100"),
                 "Latitude": 18.52,
                 "Longitude": 73.85,
             }
             
-            if i % 5 == 0:
+            rand_val = random.random()
+            if rand_val < 0.05: # 5% Abnormal (HIGH risk)
                 tx_type = "abnormal"
-                payload_dict["purchaseAmount"] = round(amount * 25.0, 2)
-                payload_dict["merchantCountryCode"] = "840"
-                payload_dict["Platform"] = "iOS"
-                payload_dict["DeviceModel"] = "iPhone 15 Pro"
-                payload_dict["OSName"] = "iOS"
+                payload_dict["purchaseAmount"] = round(amount * 15.0, 2)
+                payload_dict["merchantCountryCode"] = random.choice(COUNTRIES)
+                payload_dict["Platform"] = random.choice(PLATFORMS)
+                payload_dict["DeviceModel"] = random.choice(DEVICES)
+                payload_dict["OSName"] = random.choice(PLATFORMS)
                 payload_dict["ApplicationPackageName"] = "com.fraud.app"
-                payload_dict["IPAddress"] = "192.168.99.99"
-            elif i % 5 == 1:
+                payload_dict["IPAddress"] = f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+            elif rand_val < 0.20: # 15% Suspicious (MEDIUM/HIGH risk)
                 tx_type = "suspicious"
-                payload_dict["purchaseAmount"] = round(amount * 4.5, 2)
-                payload_dict["mcc"] = "5999"
-            else:
+                payload_dict["purchaseAmount"] = round(amount * 3.5, 2)
+                payload_dict["mcc"] = random.choice(MCCS)
+                payload_dict["IPAddress"] = f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+            else: # 80% Normal (LOW risk)
                 tx_type = "normal"
                 
             payload_obj = AReqPayload(**payload_dict)
             tasks.append((tx_type, payload_obj))
 
-        bg = BackgroundTasks()
-        
         async def process_task(tx_type, payload_obj):
             t0 = time.time()
-            report = await score(payload_obj, bg)
+            # Pass the FastAPI background_tasks object to the scoring engine!
+            report = await score(payload_obj, background_tasks)
             t1 = time.time()
             return {
-                "card_id": payload_obj.card_id_hash[:8],
+                "card_id": payload_obj.card_id_hash,
                 "type": tx_type,
                 "tier": report.deviation_tier,
                 "score": round(report.total_deviation, 2),

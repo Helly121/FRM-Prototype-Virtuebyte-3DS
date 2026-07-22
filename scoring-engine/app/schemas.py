@@ -24,6 +24,7 @@ class AReqPayload(BaseModel):
 
     # --- Simulator Control ---
     simulate_only: bool = Field(False, title="Simulate Only", description="If True, skips writing the transaction into the historical profile to prevent corrupting the baseline during demos.")
+    force_profile_update: bool = Field(False, title="Force Profile Update", description="If True, forces the profile to update even on HIGH/MEDIUM risk transactions. Used by the simulator to visually demonstrate dynamic learning.")
 
     # --- Transaction Details ---
     acctType: Optional[str] = Field("01", title="Account Type", description="Type of account: 01 = Credit, 02 = Debit, 03 = Charge")

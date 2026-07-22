@@ -15,9 +15,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnDb = document.getElementById('tab-btn-db');
     const tabDb = document.getElementById('tab-db');
     const dbListBody = document.getElementById('db-list-body');
-    const dbJsonContent = document.getElementById('db-json-content');
-    const dbViewerTitle = document.getElementById('db-viewer-title');
     const btnRefreshDb = document.getElementById('btn-refresh-db');
+
+    // DB Explorer Pagination & Search DOM
+    const dbSearch = document.getElementById('db-search');
+    const dbPrev = document.getElementById('db-prev');
+    const dbNext = document.getElementById('db-next');
+    const dbPageInfo = document.getElementById('db-page-info');
+    let dbOffset = 0;
+    const DB_LIMIT = 50;
+
+    // Modal DOM
+    const profileModal = document.getElementById('profile-modal');
+    const modalClose = document.getElementById('modal-close');
+    const modalContent = document.getElementById('modal-content');
+    const modalTitle = document.getElementById('modal-title');
+    
+    if (modalClose) {
+        modalClose.addEventListener('click', () => {
+            profileModal.style.display = 'none';
+        });
+    }
     
     // Results DOM
     const emptyState = document.getElementById('results-empty');
@@ -432,6 +450,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 demoTime.innerHTML = `Simulation completed in <strong>${data.total_time_sec} seconds</strong>.`;
                 demoResultsContainer.style.display = "block";
                 
+                // Refresh DB explorer implicitly so it's updated in the background
+                if (typeof fetchDbExplorer === "function") {
+                    fetchDbExplorer();
+                }
+                
             } catch (e) {
                 console.error(e);
                 alert("Load simulation failed. Check backend logs.");
@@ -443,17 +466,76 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Pagination and Search Handlers
+    if (dbSearch) {
+        let debounceTimer;
+        dbSearch.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                dbOffset = 0;
+                fetchDbExplorer();
+            }, 300);
+        });
+    }
+
+    if (dbPrev) {
+        dbPrev.addEventListener('click', () => {
+            if (dbOffset >= DB_LIMIT) {
+                dbOffset -= DB_LIMIT;
+                fetchDbExplorer();
+            }
+        });
+    }
+
+    if (dbNext) {
+        dbNext.addEventListener('click', () => {
+            dbOffset += DB_LIMIT;
+            fetchDbExplorer();
+        });
+    }
+
+    // JSON Formatter for Modal
+    function generateCleanHTML(obj) {
+        if (typeof obj !== 'object' || obj === null) {
+            return `<span style="color: #60a5fa;">${obj}</span>`;
+        }
+        
+        let html = '<table style="width: 100%; border-collapse: collapse;">';
+        for (const [key, value] of Object.entries(obj)) {
+            html += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 8px; color: #94a3b8; width: 30%; vertical-align: top;">${key}</td>
+                    <td style="padding: 8px; word-break: break-all;">${generateCleanHTML(value)}</td>
+                </tr>
+            `;
+        }
+        html += '</table>';
+        return html;
+    }
+
     // Fetch and render DB Explorer
     async function fetchDbExplorer() {
         if (!dbListBody) return;
-        dbListBody.innerHTML = '<tr><td colspan="2" style="text-align: center; padding: 2rem;">Loading database rows...</td></tr>';
+        dbListBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">Loading database rows...</td></tr>';
         
         try {
-            const response = await fetch('/internal/db-explorer');
+            const searchQuery = dbSearch ? dbSearch.value.trim() : '';
+            let url = `/internal/db-explorer?limit=${DB_LIMIT}&offset=${dbOffset}`;
+            if (searchQuery) url += `&search=${encodeURIComponent(searchQuery)}`;
+
+            const response = await fetch(url);
             if (!response.ok) throw new Error("Failed to fetch database rows");
             
             const rows = await response.json();
             
+            // Update Pagination UI
+            if (dbPageInfo) {
+                const pageNum = Math.floor(dbOffset / DB_LIMIT) + 1;
+                dbPageInfo.innerText = `Page ${pageNum}`;
+            }
+            if (dbPrev) dbPrev.disabled = dbOffset === 0;
+            if (dbNext) dbNext.disabled = rows.length < DB_LIMIT;
+
             if (rows.length === 0) {
                 dbListBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 2rem;">No profiles found.</td></tr>';
                 return;
@@ -462,19 +544,59 @@ document.addEventListener('DOMContentLoaded', () => {
             dbListBody.innerHTML = '';
             rows.forEach((row) => {
                 const tr = document.createElement('tr');
+                tr.style.cursor = "pointer";
                 const profile = row.profile || {};
+                const meta = profile._meta || {};
+                const device = profile.device || {};
+                const requestor = profile.requestor || {};
                 
-                // Extract specific keys for the flat table
-                const sdk = profile.sdk_version || 'N/A';
-                const device = profile.device_model || 'N/A';
-                const resolution = profile.known_resolution || 'N/A';
+                // Maturity: Txn Count & Confidence
+                const txCount = meta.transaction_count || 0;
+                const conf = (meta.profile_confidence || 0).toFixed(2);
+                const maturityHtml = `
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="color: #f8fafc; font-weight: 500;">${txCount} Txns</span>
+                        <div style="width: 100px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden;">
+                            <div style="width: ${conf * 100}%; height: 100%; background: #3b82f6;"></div>
+                        </div>
+                    </div>
+                `;
+
+                // Trust State: Normal, Probation, or Elevated Scrutiny
+                let trustState = "Normal";
+                let trustColor = "#10b981"; // Green
                 
+                if (requestor.suspicious_ever) {
+                    trustState = "Elevated Scrutiny";
+                    trustColor = "#ef4444"; // Red
+                } else if (device.probation && Object.keys(device.probation).length > 0) {
+                    trustState = "Probation";
+                    trustColor = "#f59e0b"; // Yellow
+                }
+                
+                const trustHtml = `<span style="color: ${trustColor}; font-weight: 600; font-size: 0.85rem; padding: 2px 8px; border-radius: 12px; background: ${trustColor}20;">${trustState}</span>`;
+
+                // Last Updated
+                const updatedDate = new Date(meta.last_updated * 1000);
+                const updatedStr = isNaN(updatedDate.getTime()) ? 'N/A' : updatedDate.toLocaleString();
+
                 tr.innerHTML = `
                     <td class="mono-cell">${row.card_id_hash.substring(0, 16)}...</td>
-                    <td style="color: #93c5fd;">${sdk}</td>
-                    <td>${device}</td>
-                    <td>${resolution}</td>
+                    <td>${maturityHtml}</td>
+                    <td>${trustHtml}</td>
+                    <td style="color: #94a3b8; font-size: 0.85rem;">${updatedStr}</td>
                 `;
+                
+                tr.addEventListener('mouseenter', () => tr.style.backgroundColor = 'rgba(255,255,255,0.05)');
+                tr.addEventListener('mouseleave', () => tr.style.backgroundColor = 'transparent');
+                
+                tr.addEventListener('click', () => {
+                    if (profileModal) {
+                        modalTitle.innerText = `Raw ML Profile: ${row.card_id_hash.substring(0, 16)}...`;
+                        modalContent.innerHTML = generateCleanHTML(profile);
+                        profileModal.style.display = 'flex';
+                    }
+                });
                 
                 dbListBody.appendChild(tr);
             });

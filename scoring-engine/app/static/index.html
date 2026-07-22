@@ -88,9 +88,16 @@
                             </button>
                         </div>
 
-                        <div class="table-toolbar" aria-label="Profile table details">
-                            <span>Card fingerprints and device signals</span>
-                            <span>Rows refresh from <code>/internal/db-explorer</code></span>
+                        <div class="table-toolbar" aria-label="Profile table details" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <input type="text" id="db-search" placeholder="Search Card Hash..." style="background: #ffffff; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.85rem; color: #000000; border: 1px solid #cbd5e1; outline: none;">
+                                <span style="color: #64748b; font-size: 0.85rem;">Rows refresh from <code>/internal/db-explorer</code></span>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button id="db-prev" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer;">Prev</button>
+                                <span id="db-page-info" style="font-size: 0.85rem; color: #64748b;">Page 1</span>
+                                <button id="db-next" style="background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; padding: 0.25rem 0.75rem; border-radius: 4px; cursor: pointer;">Next</button>
+                            </div>
                         </div>
 
                         <div class="table-container">
@@ -98,9 +105,9 @@
                                 <thead>
                                     <tr>
                                         <th scope="col">Card Hash</th>
-                                        <th scope="col">SDK Version</th>
-                                        <th scope="col">Device Model</th>
-                                        <th scope="col">Known Resolution</th>
+                                        <th scope="col">Maturity</th>
+                                        <th scope="col">Trust State</th>
+                                        <th scope="col">Last Updated</th>
                                     </tr>
                                 </thead>
                                 <tbody id="db-list-body"></tbody>
@@ -279,5 +286,17 @@
     </main>
 
     <script src="/static/script.js"></script>
+
+    <!-- Raw Profile Modal -->
+    <div id="profile-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; justify-content: center; align-items: center;">
+        <div style="background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; width: 80%; max-width: 900px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <div style="padding: 1.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="modal-title" style="margin: 0; font-size: 1.25rem;">Raw ML Profile</h3>
+                <button id="modal-close" style="background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer;">&times;</button>
+            </div>
+            <div id="modal-content" style="padding: 1.5rem; overflow-y: auto; flex: 1; font-family: monospace; font-size: 0.85rem; color: #cbd5e1;">
+            </div>
+        </div>
+    </div>
 </body>
 </html>
