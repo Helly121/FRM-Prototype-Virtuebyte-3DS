@@ -95,6 +95,8 @@ If you prefer to run the components natively on your machine:
 
 ## Presentation Dashboard
 
-Once the FastAPI server is running, navigate to `http://127.0.0.1:8000/` in your browser. 
+Once the FastAPI server is running, navigate to `http://127.0.0.1:8000/` in your browser to access the **3DS Risk Intelligence Console**, a highly polished, interactive dashboard with three core views:
 
-This will open a highly polished, interactive dashboard. You can click **"Load Normal Txn"** to see how a typical transaction perfectly matches a card's baseline, yielding a `LOW` risk tier. Conversely, clicking **"Load Anomalous Txn"** will simulate an integrity threat (e.g., unknown app package, massive purchase amount, mismatched OS) and accurately trigger a `HIGH` risk tier, complete with a detailed, human-readable breakdown of the deviations.
+1. **Transaction Simulator**: Test exact JSON payloads against the scoring engine. You can click **"Normal Txn"** to see how a typical transaction perfectly matches a card's baseline, yielding a `LOW` risk tier, or **"Anomalous Txn"** to simulate an integrity threat (e.g., unknown app package, massive purchase amount, mismatched OS) triggering a `HIGH` risk tier. *Scoring transactions here will dynamically update the historical profile baseline in real-time!*
+2. **Dynamic Dataset Load Simulator**: Trigger a concurrent simulation of 50 synthetic transactions instantly. The simulator splits traffic into Normal (80%), Suspicious (15%), and Abnormal (5%) buckets, scoring them live. You can click on any generated row to open an interactive modal revealing the full raw payload and the precise mathematical factors that drove the engine's tier decision.
+3. **Profile Explorer**: A direct view into the PostgreSQL `synthetic_profiles` table. View the exact learning state of each card hash, including Profile Maturity (transaction count and model confidence percentage), Trust State (Normal, Probation, or Elevated Scrutiny), and a dynamically updating `last_updated` timestamp. You can click on any profile to see the raw multi-dimensional mathematical frequency dictionaries the engine is building under the hood.
