@@ -30,8 +30,10 @@ postgres/data/
 
 # Large Datasets / Artifacts
 data/
-model/*.pkl
 dataset/
 
 # Mac / OS
 .DS_Store
+
+# Node.js
+node_modules/

@@ -3,8 +3,12 @@ from pathlib import Path
 import time
 import sys
 
-pgdata = Path(r"D:\FRM Anamoly MVP\.pgdata")
-pg_ctl = Path(r"C:\Users\Ethan Santosh Gade\AppData\Local\Programs\Python\Python311\Lib\site-packages\pgserver\pginstall\bin\pg_ctl.exe")
+import pgserver
+import os
+
+pgdata = Path(__file__).resolve().parent / ".pgdata"
+pgserver_dir = Path(pgserver.__file__).parent
+pg_ctl = pgserver_dir / "pginstall" / "bin" / ("pg_ctl.exe" if os.name == 'nt' else "pg_ctl")
 
 def main():
     print("Cleaning up old locks...")
