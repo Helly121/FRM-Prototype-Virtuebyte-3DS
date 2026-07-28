@@ -51,21 +51,21 @@ def run_pipeline():
     print("  -> Schema created (6 tables)")
 
     # 3. Generate dataset
-    print("\n[3/5] Generating synthetic dataset -> synthetic_transactions...")
+    print("\n[3/5] Generating synthetic dataset -> historical_transactions...")
     from generate_dataset import generate_dataset
     t0 = time.time()
     generate_dataset()
     print(f"  -> Dataset generated in {time.time()-t0:.1f}s")
 
     # 4. Bootstrap profiles
-    print("\n[4/5] Bootstrapping profiles -> synthetic_profiles...")
+    print("\n[4/5] Bootstrapping profiles -> card_profiles...")
     from bootstrap_profiles import bootstrap_profiles
     t0 = time.time()
     bootstrap_profiles(load_redis=False)
     print(f"  -> Profiles bootstrapped in {time.time()-t0:.1f}s")
 
     # 5. Compute surprise vectors
-    print("\n[5/5] Computing surprise vectors -> synthetic_surprise_vectors...")
+    print("\n[5/5] Computing surprise vectors -> historical_surprise_vectors...")
     from compute_vectors import compute_surprise_vectors
     t0 = time.time()
     compute_surprise_vectors()
@@ -81,26 +81,28 @@ def run_pipeline():
     # Final summary
     conn = psycopg2.connect(dsn)
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM synthetic_transactions")
+        cur.execute("SELECT COUNT(*) FROM historical_transactions")
         txn_count = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM card_profiles")
         profile_count = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM synthetic_surprise_vectors")
+        cur.execute("SELECT COUNT(*) FROM historical_surprise_vectors")
         vector_count = cur.fetchone()[0]
     conn.close()
 
     print("\n" + "=" * 70)
     print("  Pipeline Complete!")
     print("=" * 70)
-    print(f"  synthetic_transactions:    {txn_count:>8} rows")
+    print(f"  historical_transactions:    {txn_count:>8} rows")
     print(f"  card_profiles:             {profile_count:>8} rows")
-    print(f"  synthetic_surprise_vectors:{vector_count:>8} rows")
+    print(f"  historical_surprise_vectors:{vector_count:>8} rows")
     print(f"  Model: model/isolation_forest.pkl")
     print(f"\n  DSN: {dsn}")
     print("=" * 70)
 
     # Keep pgserver alive (it persists via the data dir)
-    return pg
+    if not os.environ.get("PG_DSN") and 'pg' in locals():
+        return pg
+    return None
 
 
 if __name__ == "__main__":

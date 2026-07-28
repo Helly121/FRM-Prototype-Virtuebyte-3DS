@@ -24,7 +24,7 @@ def run_test():
     # Fetch a profile and transaction from the DB
     conn = get_connection()
     with conn.cursor() as cur:
-        cur.execute("SELECT card_id_hash FROM synthetic_profiles LIMIT 1")
+        cur.execute("SELECT card_id_hash FROM card_profiles LIMIT 1")
         card_id = cur.fetchone()[0]
     conn.close()
 

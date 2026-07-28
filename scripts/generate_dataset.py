@@ -7,7 +7,7 @@ Generates 100,000 synthetic 3DS authentication records for 1,000 cards:
   - 10,000 scoring-phase anomalies (7 types A-G per S8.4)
 
 Each card is assigned one of 10 archetypes that define its behavioral baseline.
-All records are written directly into the PostgreSQL `synthetic_transactions`
+All records are written directly into the PostgreSQL `historical_transactions`
 table with one column per field.
 
 Usage:
@@ -511,7 +511,7 @@ def generate_dataset():
     random.seed(42)
 
     print("=" * 70)
-    print("3DS Synthetic Dataset Generator  (-> PostgreSQL)")
+    print("3DS Historical Dataset Generator  (-> PostgreSQL)")
     print("=" * 70)
 
     # 1. Create 1,000 cards
@@ -604,9 +604,9 @@ def generate_dataset():
 
     # Truncate existing data
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE synthetic_transactions RESTART IDENTITY CASCADE")
+        cur.execute("TRUNCATE historical_transactions RESTART IDENTITY CASCADE")
     conn.commit()
-    print("  -> Cleared synthetic_transactions table")
+    print("  -> Cleared historical_transactions table")
 
     # Build rows
     all_columns = SQL_FIELD_COLUMNS + [
@@ -614,17 +614,17 @@ def generate_dataset():
     ]
     rows = [payload_to_row(txn) for txn in all_transactions]
 
-    print(f"  Inserting {len(rows)} rows into synthetic_transactions...")
-    inserted = bulk_insert(conn, "synthetic_transactions", all_columns,
+    print(f"  Inserting {len(rows)} rows into historical_transactions...")
+    inserted = bulk_insert(conn, "historical_transactions", all_columns,
                            rows, batch_size=5000)
     print(f"  -> {inserted} rows inserted")
 
     # Verify count
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM synthetic_transactions")
+        cur.execute("SELECT COUNT(*) FROM historical_transactions")
         db_count = cur.fetchone()[0]
         cur.execute(
-            "SELECT COUNT(*) FROM synthetic_transactions "
+            "SELECT COUNT(*) FROM historical_transactions "
             "WHERE is_anomaly = TRUE"
         )
         db_anomaly = cur.fetchone()[0]

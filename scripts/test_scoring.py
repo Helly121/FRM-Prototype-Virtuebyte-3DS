@@ -15,7 +15,7 @@ conn = get_connection()
 with conn.cursor() as cur:
     cur.execute(
         "SELECT card_id_hash, profile_data "
-        "FROM synthetic_profiles LIMIT 1"
+        "FROM card_profiles LIMIT 1"
     )
     card_id, profile_data = cur.fetchone()
 conn.close()

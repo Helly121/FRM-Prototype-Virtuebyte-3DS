@@ -2,9 +2,9 @@
 bootstrap_profiles.py — Build per-card profiles from establishment records.
 
 Reads the 70,000 establishment-phase transactions from the PostgreSQL
-`synthetic_transactions` table, computes a profile for each card using
+`historical_transactions` table, computes a profile for each card using
 the production update_profile() logic, and writes the resulting profiles
-into the `synthetic_profiles` table.  Optionally also loads them into Redis.
+into the `card_profiles` table.  Optionally also loads them into Redis.
 
 Usage:
     python scripts/bootstrap_profiles.py [--redis]
@@ -43,14 +43,14 @@ def bootstrap_profiles(load_redis: bool = False):
     Build profiles from establishment-phase transactions stored in PostgreSQL.
 
     Steps:
-      1. SELECT establishment-phase rows from synthetic_transactions
+      1. SELECT establishment-phase rows from historical_transactions
       2. Group by card_id_hash
       3. For each card, sequentially apply update_profile()
-      4. INSERT each profile into synthetic_profiles
+      4. INSERT each profile into card_profiles
       5. Optionally load into Redis
     """
     print("=" * 70)
-    print("Profile Bootstrap  (PostgreSQL -> synthetic_profiles)")
+    print("Profile Bootstrap  (PostgreSQL -> card_profiles)")
     print("=" * 70)
 
     conn = get_connection()
@@ -59,7 +59,7 @@ def bootstrap_profiles(load_redis: bool = False):
     print("  Reading establishment transactions from PostgreSQL...")
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT * FROM synthetic_transactions "
+            "SELECT * FROM historical_transactions "
             "WHERE phase = 'establishment' "
             "ORDER BY card_id_hash, sequence_idx"
         )
@@ -148,7 +148,7 @@ def bootstrap_profiles(load_redis: bool = False):
             print(f"  -> {len(profiles)} profiles loaded into Redis")
         except Exception as e:
             print(f"  !! Redis load failed: {e}")
-            print("     Profiles are still in the synthetic_profiles table.")
+            print("     Profiles are still in the card_profiles table.")
 
     conn.close()
 

@@ -55,11 +55,11 @@ CREATE TABLE IF NOT EXISTS profile_reinforcement_log (
 );
 
 -- ============================================================
--- 2. Offline pipeline tables (synthetic data & training)
+-- 2. Offline pipeline tables (historical data & training)
 -- ============================================================
 
--- 100k synthetic 3DS transactions — one column per field
-CREATE TABLE IF NOT EXISTS synthetic_transactions (
+-- 100k historical 3DS transactions — one column per field
+CREATE TABLE IF NOT EXISTS historical_transactions (
     id                                  SERIAL PRIMARY KEY,
     -- Transaction Details
     card_id_hash                        TEXT NOT NULL,
@@ -124,9 +124,9 @@ CREATE TABLE IF NOT EXISTS synthetic_transactions (
     sequence_idx                        INTEGER
 );
 
-CREATE INDEX IF NOT EXISTS idx_syn_card    ON synthetic_transactions(card_id_hash);
-CREATE INDEX IF NOT EXISTS idx_syn_phase   ON synthetic_transactions(phase);
-CREATE INDEX IF NOT EXISTS idx_syn_anomaly ON synthetic_transactions(is_anomaly);
+CREATE INDEX IF NOT EXISTS idx_hist_card    ON historical_transactions(card_id_hash);
+CREATE INDEX IF NOT EXISTS idx_hist_phase   ON historical_transactions(phase);
+CREATE INDEX IF NOT EXISTS idx_hist_anomaly ON historical_transactions(is_anomaly);
 
 -- Per-card sufficient statistics (profile JSON)
 CREATE TABLE IF NOT EXISTS card_profiles (
@@ -144,14 +144,14 @@ CREATE INDEX IF NOT EXISTS idx_profile_updated ON card_profiles(updated_at);
 CREATE INDEX IF NOT EXISTS idx_profile_gin     ON card_profiles USING GIN (profile jsonb_path_ops);
 
 -- 40-dimensional surprise vectors for IF training
-CREATE TABLE IF NOT EXISTS synthetic_surprise_vectors (
+CREATE TABLE IF NOT EXISTS historical_surprise_vectors (
     id              SERIAL PRIMARY KEY,
     card_id_hash    TEXT NOT NULL,
-    transaction_id  INTEGER NOT NULL REFERENCES synthetic_transactions(id),
+    transaction_id  INTEGER NOT NULL REFERENCES historical_transactions(id),
     surprise_vector FLOAT[] NOT NULL,       -- 40-element array
     is_anomaly      BOOLEAN NOT NULL DEFAULT FALSE,
     anomaly_types   TEXT[]
 );
 
-CREATE INDEX IF NOT EXISTS idx_sv_card    ON synthetic_surprise_vectors(card_id_hash);
-CREATE INDEX IF NOT EXISTS idx_sv_anomaly ON synthetic_surprise_vectors(is_anomaly);
+CREATE INDEX IF NOT EXISTS idx_hsv_card    ON historical_surprise_vectors(card_id_hash);
+CREATE INDEX IF NOT EXISTS idx_hsv_anomaly ON historical_surprise_vectors(is_anomaly);

@@ -1,7 +1,7 @@
 """
 train_model.py — Train and validate the Isolation Forest model.
 
-Reads surprise vectors from the `synthetic_surprise_vectors` PostgreSQL
+Reads surprise vectors from the `historical_surprise_vectors` PostgreSQL
 table via a simple SELECT query, builds a numpy matrix, trains
 sklearn IsolationForest, and validates detection performance.
 
@@ -37,7 +37,7 @@ from db_config import get_connection
 
 def train_model(model_output: str = "model/isolation_forest.pkl"):
     """
-    Train the Isolation Forest from synthetic_surprise_vectors.
+    Train the Isolation Forest from historical_surprise_vectors.
 
     Hyperparameters (S9):
       - n_estimators=200
@@ -49,13 +49,13 @@ def train_model(model_output: str = "model/isolation_forest.pkl"):
     print("=" * 70)
 
     # 1. Load data from PostgreSQL
-    print("  Reading surprise vectors from synthetic_surprise_vectors...")
+    print("  Reading surprise vectors from historical_surprise_vectors...")
     conn = get_connection()
 
     with conn.cursor() as cur:
         cur.execute(
             "SELECT surprise_vector, is_anomaly, anomaly_types "
-            "FROM synthetic_surprise_vectors "
+            "FROM historical_surprise_vectors "
             "ORDER BY id"
         )
         rows = cur.fetchall()

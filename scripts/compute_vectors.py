@@ -1,10 +1,10 @@
 """
 compute_vectors.py — Compute 40-dim surprise vectors for all transactions.
 
-Reads transactions from `synthetic_transactions` and profiles from
-`synthetic_profiles` in PostgreSQL.  For each transaction, computes
+Reads transactions from `historical_transactions` and profiles from
+`card_profiles` in PostgreSQL.  For each transaction, computes
 the 40-dimensional surprise vector using the shared features.py module
-and writes the result into the `synthetic_surprise_vectors` table.
+and writes the result into the `historical_surprise_vectors` table.
 
 There are no .npy files anywhere in the pipeline.
 
@@ -39,10 +39,10 @@ def _row_to_payload(row_dict: dict) -> dict:
 def compute_surprise_vectors():
     """
     Compute surprise vectors for all transactions and write them
-    to the synthetic_surprise_vectors table.
+    to the historical_surprise_vectors table.
     """
     print("=" * 70)
-    print("Surprise Vector Computation  (PostgreSQL -> synthetic_surprise_vectors)")
+    print("Surprise Vector Computation  (PostgreSQL -> historical_surprise_vectors)")
     print("=" * 70)
 
     conn = get_connection()
@@ -57,10 +57,10 @@ def compute_surprise_vectors():
     print(f"  -> {len(profiles)} profiles loaded")
 
     # 2. Fetch all transactions (with their row id for FK reference)
-    print("  Loading transactions from synthetic_transactions...")
+    print("  Loading transactions from historical_transactions...")
     with conn.cursor() as cur:
         cur.execute(
-            "SELECT * FROM synthetic_transactions ORDER BY id"
+            "SELECT * FROM historical_transactions ORDER BY id"
         )
         col_names = [desc[0] for desc in cur.description]
         rows = cur.fetchall()
@@ -77,7 +77,7 @@ def compute_surprise_vectors():
 
     for i, raw_row in enumerate(rows):
         row_dict = dict(zip(col_names, raw_row))
-        txn_id = row_dict["id"]               # synthetic_transactions.id
+        txn_id = row_dict["id"]               # historical_transactions.id
         card_id = row_dict["card_id_hash"]
         is_anomaly = bool(row_dict.get("is_anomaly", False))
         anomaly_types = row_dict.get("anomaly_types") or []
@@ -99,7 +99,7 @@ def compute_surprise_vectors():
         vectors[i] = surprise_vector
         labels[i] = 1 if is_anomaly else 0
 
-        # Build row for synthetic_surprise_vectors
+        # Build row for historical_surprise_vectors
         insert_rows.append((
             card_id,
             txn_id,
@@ -141,12 +141,12 @@ def compute_surprise_vectors():
                   f"{normal_mean:>8.3f} {anomaly_mean:>8.3f} "
                   f"{ratio:>8.1f}x")
 
-    # 5. Write to synthetic_surprise_vectors
+    # 5. Write to historical_surprise_vectors
     print(f"\n  Writing {len(insert_rows)} vectors to "
-          "synthetic_surprise_vectors...")
+          "historical_surprise_vectors...")
     with conn.cursor() as cur:
         cur.execute(
-            "TRUNCATE synthetic_surprise_vectors RESTART IDENTITY"
+            "TRUNCATE historical_surprise_vectors RESTART IDENTITY"
         )
     conn.commit()
 
@@ -154,16 +154,16 @@ def compute_surprise_vectors():
         "card_id_hash", "transaction_id", "surprise_vector",
         "is_anomaly", "anomaly_types",
     ]
-    inserted = bulk_insert(conn, "synthetic_surprise_vectors",
+    inserted = bulk_insert(conn, "historical_surprise_vectors",
                            sv_columns, insert_rows, batch_size=5000)
     print(f"  -> {inserted} rows inserted")
 
     # Verify
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM synthetic_surprise_vectors")
+        cur.execute("SELECT COUNT(*) FROM historical_surprise_vectors")
         db_count = cur.fetchone()[0]
         cur.execute(
-            "SELECT COUNT(*) FROM synthetic_surprise_vectors "
+            "SELECT COUNT(*) FROM historical_surprise_vectors "
             "WHERE is_anomaly = TRUE"
         )
         db_anomaly = cur.fetchone()[0]
