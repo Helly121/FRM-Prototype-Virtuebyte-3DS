@@ -36,6 +36,24 @@ CREATE INDEX IF NOT EXISTS idx_scored_at ON scored_transactions(scored_at);
 CREATE INDEX IF NOT EXISTS idx_tier      ON scored_transactions(deviation_tier);
 CREATE INDEX IF NOT EXISTS idx_outcome   ON scored_transactions(outcome_label);
 
+-- Global Blocklist (Cross-card sharing of bad signals)
+CREATE TABLE IF NOT EXISTS global_blocklist (
+    id BIGSERIAL PRIMARY KEY,
+    field TEXT NOT NULL,
+    value_hash TEXT NOT NULL,
+    flagged_at TIMESTAMPTZ DEFAULT NOW(),
+    source_card TEXT NOT NULL,
+    UNIQUE (field, value_hash)
+);
+
+-- Profile Reinforcement Log (Tracking feedback adjustments)
+CREATE TABLE IF NOT EXISTS profile_reinforcement_log (
+    id BIGSERIAL PRIMARY KEY,
+    card_id_hash TEXT NOT NULL,
+    reinforced_at TIMESTAMPTZ DEFAULT NOW(),
+    reason TEXT
+);
+
 -- ============================================================
 -- 2. Offline pipeline tables (synthetic data & training)
 -- ============================================================
@@ -111,13 +129,19 @@ CREATE INDEX IF NOT EXISTS idx_syn_phase   ON synthetic_transactions(phase);
 CREATE INDEX IF NOT EXISTS idx_syn_anomaly ON synthetic_transactions(is_anomaly);
 
 -- Per-card sufficient statistics (profile JSON)
-CREATE TABLE IF NOT EXISTS synthetic_profiles (
-    card_id_hash   TEXT PRIMARY KEY,
-    profile_data   JSONB NOT NULL,
-    txn_count      INTEGER,
-    confidence     FLOAT,
-    created_at     TIMESTAMPTZ DEFAULT NOW()
+CREATE TABLE IF NOT EXISTS card_profiles (
+    card_id_hash      TEXT PRIMARY KEY,
+    profile           JSONB NOT NULL,
+    transaction_count INTEGER,
+    profile_confidence FLOAT,
+    version           INTEGER NOT NULL DEFAULT 1,
+    trust_state       TEXT NOT NULL DEFAULT 'normal' CHECK (trust_state IN ('normal','elevated_scrutiny')),
+    created_at        TIMESTAMPTZ DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_profile_updated ON card_profiles(updated_at);
+CREATE INDEX IF NOT EXISTS idx_profile_gin     ON card_profiles USING GIN (profile jsonb_path_ops);
 
 -- 40-dimensional surprise vectors for IF training
 CREATE TABLE IF NOT EXISTS synthetic_surprise_vectors (

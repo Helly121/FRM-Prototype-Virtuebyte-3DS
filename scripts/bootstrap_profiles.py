@@ -102,14 +102,14 @@ def bootstrap_profiles(load_redis: bool = False):
     print(f"    Max confidence:  {max(conf_vals):.3f}")
     print(f"    Avg txn count:   {sum(txn_counts)/len(txn_counts):.1f}")
 
-    # 4. Write to synthetic_profiles table
-    print("\n  Writing profiles to synthetic_profiles table...")
+    # 4. Write to card_profiles table
+    print("\n  Writing profiles to card_profiles table...")
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE synthetic_profiles")
+        cur.execute("TRUNCATE card_profiles")
         for card_id_hash, profile in profiles.items():
             cur.execute(
-                "INSERT INTO synthetic_profiles "
-                "(card_id_hash, profile_data, txn_count, confidence) "
+                "INSERT INTO card_profiles "
+                "(card_id_hash, profile, transaction_count, profile_confidence) "
                 "VALUES (%s, %s, %s, %s)",
                 (
                     card_id_hash,
@@ -119,11 +119,11 @@ def bootstrap_profiles(load_redis: bool = False):
                 ),
             )
     conn.commit()
-    print(f"  -> {len(profiles)} profiles written to synthetic_profiles")
+    print(f"  -> {len(profiles)} profiles written to card_profiles")
 
     # Verify
     with conn.cursor() as cur:
-        cur.execute("SELECT COUNT(*) FROM synthetic_profiles")
+        cur.execute("SELECT COUNT(*) FROM card_profiles")
         db_count = cur.fetchone()[0]
     print(f"  -> Verified: {db_count} profiles in DB")
 

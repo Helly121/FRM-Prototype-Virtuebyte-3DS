@@ -47,16 +47,13 @@ def compute_surprise_vectors():
 
     conn = get_connection()
 
-    # 1. Load profiles from synthetic_profiles
-    print("  Loading profiles from synthetic_profiles...")
+    # 1. Load profiles from card_profiles
+    print("  Loading profiles from card_profiles...")
     profiles = {}
     with conn.cursor() as cur:
-        cur.execute("SELECT card_id_hash, profile_data FROM synthetic_profiles")
-        for card_id_hash, profile_data in cur.fetchall():
-            profiles[card_id_hash] = (
-                json.loads(profile_data) if isinstance(profile_data, str)
-                else profile_data
-            )
+        cur.execute("SELECT card_id_hash, profile FROM card_profiles")
+        for row in cur.fetchall():
+            profiles[row[0]] = row[1] if isinstance(row[1], dict) else json.loads(row[1])
     print(f"  -> {len(profiles)} profiles loaded")
 
     # 2. Fetch all transactions (with their row id for FK reference)

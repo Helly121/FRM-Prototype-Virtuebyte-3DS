@@ -24,17 +24,18 @@ def run_pipeline():
     print("  3DS Anomaly Detection — Full Offline Pipeline")
     print("=" * 70)
 
-    # 1. Start embedded PostgreSQL via pgserver
-    print("\n[1/5] Starting embedded PostgreSQL via pgserver...")
-    import pgserver
-
-    pg_data_dir = str(Path(__file__).resolve().parent.parent / ".pgdata")
-    pg = pgserver.get_server(pg_data_dir)
-    dsn = pg.get_uri()
-    print(f"  -> PostgreSQL running. DSN: {dsn}")
-
-    # Export DSN so all scripts pick it up
-    os.environ["PG_DSN"] = dsn
+    # 1. Start embedded PostgreSQL via pgserver (if no external DB provided)
+    dsn = os.environ.get("PG_DSN")
+    if not dsn:
+        print("\n[1/5] Starting embedded PostgreSQL via pgserver...")
+        import pgserver
+        pg_data_dir = str(Path(__file__).resolve().parent.parent / ".pgdata")
+        pg = pgserver.get_server(pg_data_dir)
+        dsn = pg.get_uri()
+        print(f"  -> PostgreSQL running. DSN: {dsn}")
+        os.environ["PG_DSN"] = dsn
+    else:
+        print(f"\n[1/5] Using existing database from PG_DSN: {dsn}")
 
     # 2. Create schema
     print("\n[2/5] Creating schema...")
@@ -82,7 +83,7 @@ def run_pipeline():
     with conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM synthetic_transactions")
         txn_count = cur.fetchone()[0]
-        cur.execute("SELECT COUNT(*) FROM synthetic_profiles")
+        cur.execute("SELECT COUNT(*) FROM card_profiles")
         profile_count = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM synthetic_surprise_vectors")
         vector_count = cur.fetchone()[0]
@@ -92,11 +93,10 @@ def run_pipeline():
     print("  Pipeline Complete!")
     print("=" * 70)
     print(f"  synthetic_transactions:    {txn_count:>8} rows")
-    print(f"  synthetic_profiles:        {profile_count:>8} rows")
+    print(f"  card_profiles:             {profile_count:>8} rows")
     print(f"  synthetic_surprise_vectors:{vector_count:>8} rows")
     print(f"  Model: model/isolation_forest.pkl")
-    print(f"\n  PostgreSQL data dir: {pg_data_dir}")
-    print(f"  DSN: {dsn}")
+    print(f"\n  DSN: {dsn}")
     print("=" * 70)
 
     # Keep pgserver alive (it persists via the data dir)
