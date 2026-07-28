@@ -30,6 +30,8 @@ from .schemas import AReqPayload, DeviationReport, FeedbackPayload
 from .features import extract_and_score
 from .profile import new_cold_profile, update_profile
 from .report import build_report
+from .config_service import initialize_config_service, load_current_weights
+from .config_routes import config_router
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -58,9 +60,20 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle."""
     global IF_MODEL, pg_pool, redis_client
 
-    # --- Load Isolation Forest model ---
+    # --- Load Isolation Forest model (auto-train if missing) ---
     try:
         import joblib
+        if not os.path.exists(MODEL_PATH):
+            logger.warning(
+                f"IF model not found at {MODEL_PATH}. "
+                "Attempting automatic training from startup module..."
+            )
+            try:
+                from .startup import generate_model_if_missing
+                generate_model_if_missing()
+            except Exception as train_err:
+                logger.error(f"Auto-training failed: {train_err}")
+
         IF_MODEL = joblib.load(MODEL_PATH)
         logger.info(f"Loaded IF model from {MODEL_PATH}")
     except FileNotFoundError:
@@ -77,15 +90,20 @@ async def lifespan(app: FastAPI):
     try:
         import asyncpg
         pg_pool = await asyncpg.create_pool(dsn=PG_DSN, min_size=2, max_size=10)
+        app.state.pg_pool = pg_pool
         logger.info("PostgreSQL connected")
+        # Initialise config service (creates model_configuration table + seeds defaults)
+        await initialize_config_service(pg_pool)
     except Exception as e:
         logger.warning(f"PostgreSQL unavailable ({e}). Audit logging disabled.")
         pg_pool = None
+        app.state.pg_pool = None
 
-    # --- Redis connection ---
+    # --- Redis connection (optional, graceful fallback) ---
     try:
         import redis.asyncio as redis
-        redis_client = redis.from_url("redis://localhost:6379", decode_responses=True)
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379")
+        redis_client = redis.from_url(redis_url, decode_responses=True)
         await redis_client.ping()
         logger.info("Redis connected")
     except Exception as e:
@@ -127,6 +145,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount the config router (GET/PUT /internal/config/weights)
+app.include_router(config_router)
 
 # In-memory profile cache (fallback when PostgreSQL is unavailable)
 _profile_cache: dict = {}
@@ -253,6 +274,11 @@ async def write_audit(report: DeviationReport):
     if not pg_pool:
         return
 
+    # Normalise tier so legacy DB CHECK constraints (LOW/MEDIUM/HIGH only) don't fail
+    safe_tier = report.deviation_tier
+    if safe_tier == "CRITICAL":
+        safe_tier = "HIGH"  # Stored as HIGH; frontend reads total_deviation to show CRITICAL
+
     try:
         async with pg_pool.acquire() as conn:
             await conn.execute(
@@ -266,7 +292,7 @@ async def write_audit(report: DeviationReport):
                 """,
                 report.transaction_id,
                 report.card_id,
-                report.deviation_tier,
+                safe_tier,
                 report.total_deviation,
                 report.if_score,
                 report.profile_confidence,
@@ -409,7 +435,8 @@ async def score(payload: AReqPayload, background_tasks: BackgroundTasks):
     else:
         if_score = 0.0  # Neutral when model not loaded
 
-    # 4. Build report
+    # 4. Build report (using live weights from config service)
+    live_static, live_cross = await load_current_weights(pg_pool)
     report = build_report(
         payload_dict,
         surprise_vector,
@@ -418,6 +445,8 @@ async def score(payload: AReqPayload, background_tasks: BackgroundTasks):
         if_score,
         profile,
         scoring_start_ms,
+        live_static_weights=live_static,
+        live_cross_weights=live_cross,
     )
 
     # 5. Fire background tasks
@@ -725,7 +754,13 @@ async def run_demo_load_test(background_tasks: BackgroundTasks):
         
         def extract_top_key(freq_dict, default):
             if not freq_dict: return default
-            return max(freq_dict.items(), key=lambda x: x[1])[0]
+            # Handle both plain freq dicts {k: float} and bounded sets {k: {freq, last_seen}}
+            def get_score(item):
+                v = item[1]
+                if isinstance(v, dict):
+                    return v.get("freq", 0)
+                return float(v) if v else 0
+            return max(freq_dict.items(), key=get_score)[0]
 
         MCCS = ["5411", "5812", "5912", "5541", "4121", "4814", "5999", "5732"]
         COUNTRIES = ["356", "840", "826", "036", "124", "156"]
@@ -763,7 +798,16 @@ async def run_demo_load_test(background_tasks: BackgroundTasks):
                 "Platform": extract_top_key(dev.get("platform_freq", {}), "Android"),
                 "DeviceModel": extract_top_key(dev.get("device_model_freq", {}), "Samsung Galaxy A34"),
                 "OSName": extract_top_key(dev.get("os_name_freq", {}), "Android"),
+                "OSVersion": extract_top_key(dev.get("os_version_freq", {}), "14"),
+                "Locale": extract_top_key(dev.get("locale_freq", {}), "en_IN"),
+                "TimeZone": extract_top_key(dev.get("known_timezones", {}), "Asia/Kolkata"),
+                "ScreenResolution": extract_top_key(dev.get("known_resolutions", {}), "1080x2340"),
+                # Use the card's known app package (raw name that maps to the stored hash)
+                "ApplicationPackageName": "com.merchant.pay.app1",
+                "SDKRefNumber": "SDK_REF_CONSTANT_HASH_V1",
+                "SDKVersion": extract_top_key(dev.get("sdk_version_freq", {}), "5.3.0"),
                 "threeDSRequestorID": "REQ0001",
+                "threeDSRequestorURL": "https://pay1.merchant.com/3ds",
                 "threeDSRequestorAuthenticationInd": "01",
                 "threeDSReqAuthMethod": "02",
                 "chAccAgeInd": "05",
@@ -774,9 +818,10 @@ async def run_demo_load_test(background_tasks: BackgroundTasks):
                 "nbPurchaseAccount": 10,
                 "shipIndicator": "01",
                 "cardSecurityCodeStatus": "01",
-                "IPAddress": extract_top_key(dev.get("ip_subnet_freq", {}), "192.168.1.100"),
-                "Latitude": 18.52,
-                "Longitude": 73.85,
+                "IPAddress": "192.168.1.100",
+                "Latitude": dev.get("geo_lat", 18.52),
+                "Longitude": dev.get("geo_lon", 73.85),
+                "dateTime": datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
             }
             
             rand_val = random.random()

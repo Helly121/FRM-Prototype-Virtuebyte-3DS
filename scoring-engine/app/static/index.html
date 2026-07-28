@@ -38,6 +38,10 @@
                 <span class="menu-icon" aria-hidden="true">AU</span>
                 <span>Audit Log</span>
             </button>
+            <button class="menu-item" id="tab-btn-config" type="button">
+                <span class="menu-icon" aria-hidden="true">⚙</span>
+                <span>Model Configuration</span>
+            </button>
         </nav>
 
         <div class="sidebar-status" aria-label="System status">
@@ -283,8 +287,154 @@
                     </div>
                 </article>
             </section>
+
+            <!-- ═══════════════════════════════════════════════
+                 MODEL CONFIGURATION  —  Issue #3
+            ════════════════════════════════════════════════ -->
+            <section class="view-section" id="tab-config" aria-labelledby="config-title">
+
+                <!-- Summary / action header -->
+                <div class="config-header-card">
+                    <div class="config-header-inner">
+                        <div class="config-header-left">
+                            <p class="section-kicker">Surprise vector tuning</p>
+                            <h3 id="config-title">Model Configuration</h3>
+                            <p>Configure weights used by the scoring engine. Changes apply immediately — no restart required.</p>
+                        </div>
+                        <div class="config-header-actions">
+                            <button class="btn-secondary" id="cfg-btn-import" type="button" title="Import JSON configuration">
+                                ↑ Import JSON
+                            </button>
+                            <button class="btn-secondary" id="cfg-btn-export" type="button" title="Export current configuration as JSON">
+                                ↓ Export JSON
+                            </button>
+                            <button class="btn-danger" id="cfg-btn-reset" type="button">
+                                ↺ Reset Defaults
+                            </button>
+                            <button class="btn btn-primary" id="cfg-btn-save" type="button" disabled>
+                                <span class="btn-text" id="cfg-save-text">Save Changes</span>
+                                <span class="loader" id="cfg-save-loader" style="display:none;" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Weight total + validation -->
+                    <div class="weight-total-indicator">
+                        <div style="display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="weight-total-label">Total Weight</span>
+                                <span class="weight-total-pill valid" id="cfg-weight-total">— / —</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="weight-total-label">Modified Weights</span>
+                                <span style="color:var(--text-muted);font-size:0.9rem;font-weight:500;" id="cfg-vectors-changed">0 / 44</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span class="weight-total-label">Last Saved</span>
+                                <span style="color:var(--text-muted);font-size:0.9rem;font-weight:500;" id="cfg-last-saved">Never</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation banner -->
+                <div class="validation-banner" id="cfg-validation-banner" role="alert">
+                    <span class="validation-banner-icon">⚠</span>
+                    <span id="cfg-validation-msg">Invalid configuration.</span>
+                </div>
+
+                <!-- Main two-column layout -->
+                <div class="config-layout">
+                    <!-- Left: search + groups -->
+                    <div>
+                        <div class="config-search-row">
+                            <div class="config-search-wrap">
+                                <span class="config-search-icon">🔍</span>
+                                <input
+                                    type="text"
+                                    id="cfg-search"
+                                    class="config-search-input"
+                                    placeholder="Search Surprise Vector..."
+                                    autocomplete="off"
+                                    aria-label="Search surprise vectors"
+                                >
+                            </div>
+                            <span class="config-search-count" id="cfg-search-count"></span>
+                        </div>
+
+                        <div class="weight-groups" id="cfg-weight-groups">
+                            <!-- Populated by JS -->
+                            <div style="padding:2rem;text-align:center;color:var(--text-muted);">
+                                Loading configuration…
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: summary stats + change history -->
+                    <aside class="config-side" aria-label="Configuration summary">
+                        <!-- Stats -->
+                        <div class="config-stat-card">
+                            <h4 class="config-stat-title">Configuration Summary</h4>
+                            <div class="config-stat-grid" id="cfg-stats-grid">
+                                <div class="config-stat-item">
+                                    <span class="config-stat-label">Total Vectors</span>
+                                    <span class="config-stat-val" id="cs-total-vectors">—</span>
+                                </div>
+                                <div class="config-stat-item">
+                                    <span class="config-stat-label">Average Weight</span>
+                                    <span class="config-stat-val" id="cs-avg-weight">—</span>
+                                </div>
+                                <div class="config-stat-item">
+                                    <span class="config-stat-label">Highest Weight</span>
+                                    <span class="config-stat-val" id="cs-highest">—</span>
+                                </div>
+                                <div class="config-stat-item">
+                                    <span class="config-stat-label">Lowest Weight</span>
+                                    <span class="config-stat-val" id="cs-lowest">—</span>
+                                </div>
+                                <div class="config-stat-item span-full">
+                                    <span class="config-stat-label">Last Updated</span>
+                                    <span class="config-stat-val" id="cs-last-updated">—</span>
+                                </div>
+                                <div class="config-stat-item span-full">
+                                    <span class="config-stat-label">Updated By</span>
+                                    <span class="config-stat-val" id="cs-updated-by">—</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Change history -->
+                        <div class="config-stat-card">
+                            <h4 class="config-stat-title">Recent Changes</h4>
+                            <div class="config-history-list" id="cfg-history-list">
+                                <div style="color:var(--text-muted);font-size:0.82rem;text-align:center;padding:1rem 0;">
+                                    No changes recorded yet.
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </section>
         </div>
     </main>
+
+    <!-- Hidden file input for JSON import -->
+    <input type="file" id="cfg-import-file" accept=".json,application/json" style="display:none;">
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <!-- Confirm dialog (Reset Defaults) -->
+    <div class="confirm-overlay" id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+        <div class="confirm-dialog">
+            <h4 id="confirm-title">Reset to Factory Defaults?</h4>
+            <p>This will restore all 44 surprise vector weights to the original expert-calibrated values. The change will take effect immediately and be logged in the audit trail.</p>
+            <div class="confirm-actions">
+                <button class="btn-secondary" id="confirm-cancel" type="button">Cancel</button>
+                <button class="btn-danger" id="confirm-ok" type="button">Reset Defaults</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/script.js"></script>
 

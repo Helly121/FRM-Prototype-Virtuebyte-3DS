@@ -167,7 +167,7 @@ class DeviationReport(BaseModel):
     card_id: str
     evaluated_at: str
     channel: str = "SDK"
-    deviation_tier: str = Field(..., description="LOW / MEDIUM / HIGH")
+    deviation_tier: str = Field(..., description="LOW / MEDIUM / HIGH / CRITICAL")
     profile_confidence: float
     total_deviation: float
     if_score: float

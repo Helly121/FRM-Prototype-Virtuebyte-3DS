@@ -881,10 +881,14 @@ def extract_and_score(payload: dict, profile: dict, blocklist_hits: list = None)
     }
 
     # ---- Cold-start shrinkage ----
+    # When a card has little history, we partially shrink personal surprise
+    # scores toward zero (the cohort prior).  We do NOT shrink them all the
+    # way to zero so that clear red-flags (suspicious activity, anomalous
+    # amounts, obviously fraudulent patterns) still surface.
     confidence = meta.get("profile_confidence", 0.0)
     if confidence < COLD_START_CONFIDENCE_THRESHOLD:
-        # Blend personal scores toward zero (cohort prior = 0 surprise)
-        shrinkage = confidence / COLD_START_CONFIDENCE_THRESHOLD
+        # Blend: keep at least 50 % of the raw signal so fraud is still detectable
+        shrinkage = 0.5 + 0.5 * (confidence / COLD_START_CONFIDENCE_THRESHOLD)
         surprise = surprise * shrinkage
 
     # ---- Cross-field checks ----

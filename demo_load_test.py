@@ -6,12 +6,18 @@ import time
 import json
 from datetime import datetime, timezone
 
-DB_DSN = "postgresql://postgres:password@127.0.0.1:5432/postgres"
+DB_DSN = "postgresql://postgres:postgres@127.0.0.1:5432/anomaly_db"
 API_URL = "http://127.0.0.1:8000/internal/score"
 
 def extract_top_key(freq_dict: dict, default: str) -> str:
     if not freq_dict: return default
-    return max(freq_dict.items(), key=lambda x: x[1])[0]
+    # Handle both plain freq dicts {k: float} and bounded sets {k: {freq, last_seen}}
+    def get_score(item):
+        v = item[1]
+        if isinstance(v, dict):
+            return v.get("freq", 0)
+        return float(v) if v else 0
+    return max(freq_dict.items(), key=get_score)[0]
 
 def build_payload(card_id: str, profile: dict, tx_type: str) -> dict:
     """Builds a transaction payload based on the user's actual ML profile."""

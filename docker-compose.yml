@@ -1,23 +1,24 @@
 # ============================================================
 # 3DS Anomaly Detection System — Docker Compose
-# Single-host MVP deployment (§13)
-# ============================================================
+# Single-host MVP deployment
 #
-# Startup sequence:
-#   1. docker compose up redis postgres -d
-#   2. python scripts/generate_dataset.py
-#   3. python scripts/bootstrap_profiles.py --redis
-#   4. python scripts/compute_vectors.py
-#   5. python scripts/train_model.py
-#   6. docker compose up --build
+# Usage:
+#   docker compose up --build
+#
+# No manual SQL, no manual migration, no manual model training.
+# Everything initialises automatically on first startup:
+#   1. PostgreSQL runs init.sql (creates ALL tables + seeds 100 profiles)
+#   2. Scoring engine startup.py runs:
+#      - Verifies / creates any missing tables
+#      - Seeds profiles if empty
+#      - Trains Isolation Forest model if missing
+#   3. Uvicorn starts serving on :8000
+#   4. API Gateway starts on :3000
 # ============================================================
-
-version: "3.9"
 
 services:
 
-
-  # --- PostgreSQL Audit Log ---
+  # --- PostgreSQL ---
   postgres:
     image: postgres:16-alpine
     container_name: anomaly-postgres
@@ -31,10 +32,11 @@ services:
       - pg_data:/var/lib/postgresql/data
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d anomaly_db"]
+      interval: 5s
       timeout: 3s
-      retries: 5
+      retries: 10
+      start_period: 10s
     restart: unless-stopped
 
   # --- FastAPI Scoring Engine ---
@@ -48,12 +50,21 @@ services:
     environment:
       MODEL_PATH: /app/model/isolation_forest.pkl
       PG_DSN: postgresql://postgres:postgres@postgres:5432/anomaly_db
+      # Redis is optional — engine falls back to in-memory if not available
+      REDIS_URL: redis://localhost:6379
     volumes:
-      - ./model:/app/model:ro
-      - ./data:/app/data:ro
+      # model dir is read-write so startup.py can train & save the model
+      - model_data:/app/model
+      - ./data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     restart: unless-stopped
 
   # --- Node.js API Gateway ---
@@ -69,8 +80,10 @@ services:
       SCORING_ENGINE_URL: http://scoring-engine:8000
       API_KEY: dev-api-key-change-in-production
     depends_on:
-      - scoring-engine
+      scoring-engine:
+        condition: service_healthy
     restart: unless-stopped
 
 volumes:
   pg_data:
+  model_data:

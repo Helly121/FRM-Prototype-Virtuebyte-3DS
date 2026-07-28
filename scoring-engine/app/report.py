@@ -2,21 +2,32 @@
 report.py — Deviation report builder with reason templates.
 
 Handles:
-  - Tier assignment (TotalDeviation + IF score → LOW/MEDIUM/HIGH)
+  - Tier assignment (TotalDeviation + IF score → LOW/MEDIUM/HIGH/CRITICAL)
   - Contribution ranking and percentage calculation
   - Human-readable reason template-fill
   - Non-contributing context generation
+
+Dynamic weights
+---------------
+build_report() accepts optional live_static_weights and live_cross_weights
+parameters.  When supplied (from config_service.load_current_weights),
+those override the module-level defaults from weights.py.  The scoring
+engine always passes live weights so configuration changes take effect
+immediately without a restart.
 """
 
 import uuid
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
+
+import numpy as np
 
 from .weights import (
-    STATIC_WEIGHTS,
-    CROSS_FIELD_WEIGHTS,
+    STATIC_WEIGHTS as _DEFAULT_STATIC_WEIGHTS,
+    CROSS_FIELD_WEIGHTS as _DEFAULT_CROSS_WEIGHTS,
     DIMENSION_NAMES,
     DIMENSION_TO_FIELD,
+    TIER_CRITICAL_DEVIATION,
     TIER_HIGH_DEVIATION,
     TIER_MED_DEVIATION,
     IF_HIGH_THRESHOLD,
@@ -225,9 +236,20 @@ def assign_tier(total_deviation: float, if_score: float) -> str:
     """
     Assign deviation tier based on TotalDeviation and IF score.
     Either signal alone can escalate the tier.
+
+    Expected behaviour:
+      Normal transaction                   → LOW
+      Slight anomaly (unusual MCC/amount)  → MEDIUM
+      Large amount + impossible travel     → HIGH
+      Multiple severe anomalies            → CRITICAL
     """
+    # CRITICAL: extreme weighted deviation
+    if total_deviation >= TIER_CRITICAL_DEVIATION:
+        return "CRITICAL"
+    # HIGH: significant deviation or IF model flags strongly anomalous
     if total_deviation >= TIER_HIGH_DEVIATION or if_score <= IF_HIGH_THRESHOLD:
         return "HIGH"
+    # MEDIUM: noticeable deviation or IF model flags mildly anomalous
     if total_deviation >= TIER_MED_DEVIATION or if_score <= IF_MED_THRESHOLD:
         return "MEDIUM"
     return "LOW"
@@ -245,9 +267,14 @@ def build_report(
     if_score: float,
     profile: dict,
     scoring_start_ms: float,
+    live_static_weights: Optional[np.ndarray] = None,
+    live_cross_weights: Optional[dict] = None,
 ) -> DeviationReport:
     """
     Build the full DeviationReport from scoring results.
+
+    live_static_weights / live_cross_weights override the module defaults
+    when provided.  The scoring endpoint always passes the live config.
 
     Steps:
       1. Compute TotalDeviation as weighted sum
@@ -258,20 +285,23 @@ def build_report(
       6. Template-fill human-readable reasons
     """
     import time
-    import numpy as np
+
+    # Use live weights if provided, fall back to module defaults
+    static_w = live_static_weights if live_static_weights is not None else _DEFAULT_STATIC_WEIGHTS
+    cross_w = live_cross_weights if live_cross_weights is not None else _DEFAULT_CROSS_WEIGHTS
 
     meta = profile.get("_meta", {})
 
     # 1. Weighted sum of 40-dim vector
     weighted_scores = {}
     for i, dim_name in enumerate(DIMENSION_NAMES):
-        w = float(STATIC_WEIGHTS[i])
+        w = float(static_w[i])
         s = float(surprise_vector[i])
         weighted_scores[dim_name] = w * s
 
     # 2. Add cross-field weighted contributions
     for cf_name, cf_data in cross_field_scores.items():
-        w = CROSS_FIELD_WEIGHTS.get(cf_name, 0.0)
+        w = cross_w.get(cf_name, 0.0)
         if isinstance(cf_data, dict):
             raw_score = float(cf_data.get("score", 0.0))
             contributions[cf_name] = cf_data

@@ -141,15 +141,20 @@ CROSS_FIELD_WEIGHTS = {
 # ---------------------------------------------------------------------------
 # Tier Thresholds
 # ---------------------------------------------------------------------------
-# Calibrated against synthetic data. Adjust after observing real transactions.
-# TotalDeviation is the weighted sum of all surprise scores.
+# Calibrated so that:
+#   - Normal transaction (expected values, known device) → LOW  (< 0.8)
+#   - Slight anomaly (unusual MCC, mildly elevated amount) → MEDIUM (0.8–2.0)
+#   - Large anomaly (impossible travel + new device + risky MCC) → HIGH (2.0–5.0)
+#   - Multiple severe anomalies (card takeover pattern) → CRITICAL (5.0+)
 
-TIER_HIGH_DEVIATION = 3.0      # TotalDeviation >= this → HIGH
-TIER_MED_DEVIATION = 1.5       # TotalDeviation >= this → MEDIUM
+TIER_CRITICAL_DEVIATION = 5.0  # TotalDeviation >= this → CRITICAL
+TIER_HIGH_DEVIATION = 2.0      # TotalDeviation >= this → HIGH
+TIER_MED_DEVIATION = 0.8       # TotalDeviation >= this → MEDIUM
 
 # Isolation Forest score boundaries (negative = more anomalous)
-IF_HIGH_THRESHOLD = -0.15      # IF score <= this → force HIGH
-IF_MED_THRESHOLD = -0.05       # IF score <= this → force MEDIUM
+# decision_function returns ~+0.1 for normals, ~ -0.1 to -0.3 for outliers
+IF_HIGH_THRESHOLD = -0.10      # IF score <= this → escalate to at least HIGH
+IF_MED_THRESHOLD = -0.08       # IF score <= this → escalate to at least MEDIUM
 
 # Contribution suppression: factors contributing < this % are moved to context
 CONTRIBUTION_MIN_PCT = 2.0

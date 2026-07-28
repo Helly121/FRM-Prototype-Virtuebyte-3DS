@@ -2,7 +2,7 @@ import asyncio
 import asyncpg
 import os
 
-PG_DSN = os.getenv("PG_DSN", "postgresql://postgres:postgres@127.0.0.1:5432/postgres")
+PG_DSN = os.getenv("PG_DSN", "postgresql://postgres:postgres@127.0.0.1:5432/anomaly_db")
 
 async def migrate():
     print(f"Connecting to {PG_DSN}")
