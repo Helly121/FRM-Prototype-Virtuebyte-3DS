@@ -12,50 +12,70 @@ This project is a high-performance **EMV 3-D Secure Anomaly Detection Scoring En
 
 ## Architecture
 
-The system follows a lean microservices architecture powered by **Uvicorn** for high-performance ASGI serving:
+The system follows a lean microservices architecture powered by **Uvicorn** for high-performance ASGI serving, combining a real-time scoring engine with an offline Machine Learning pipeline and a robust PostgreSQL data tier.
 
 ```mermaid
 flowchart TB
     DS["3DS Directory Server\nAReq payload"]
 
-    subgraph GW["API Gateway — Node.js / Express"]
-        V["JSON Schema Validation"]
-        H["SHA-256 acctNumber hash"]
-        RL["Rate Limiting"]
-        P["Proxy to FastAPI"]
-    end
-
-    subgraph SE["Scoring Engine — Python / FastAPI (Uvicorn)"]
+    subgraph SE["FastAPI Scoring Engine (Uvicorn)"]
         direction TB
-        ST["Startup: load IF.pkl into RAM\nopen Postgres pools"]
-        RF["Fetch profile from DB/Cache"]
-        FE2["Feature Extraction\n50 fields → preprocessing"]
-        SC2["Compute 40-dim Surprise Vector\n(all §6 formulas)"]
-        IF2["Isolation Forest inference\nIF.pkl already in RAM"]
-        WS["Weighted sum → TotalDeviation"]
-        EX["Explanation Generator\ntemplate-fill, rank, tier"]
-        BG["BackgroundTasks (post-response)\n• update_profile\n• write_audit → Postgres"]
+        ST["Startup: load IF.pkl into RAM"]
+        RF["Fetch Profile (card_profiles)"]
+        FE["Feature Extraction\n(50 fields)"]
+        BL["Check global_blocklist"]
+        SC["Compute 40-dim Surprise Vector"]
+        IF["Isolation Forest Inference"]
+        WS["Weighted Sum → TotalDeviation"]
+        EX["Explanation Generator"]
+        BG["Background Tasks\n• update_profile()\n• write_audit()"]
     end
 
-    PG[("PostgreSQL\nProfile & Audit Log")]
+    subgraph OP["Offline Data Pipeline (run_pipeline.py)"]
+        direction TB
+        GD["1. generate_dataset.py\n(100k synthetic Txns)"]
+        BP["2. bootstrap_profiles.py\n(Builds ML memory)"]
+        CV["3. compute_vectors.py\n(Calculates Surprises)"]
+        TM["4. train_model.py\n(Trains IF.pkl)"]
+    end
 
-    DS --> GW
-    GW --> SE
-    SE --> RF --> PG
-    RF --> FE2 --> SC2
-    SC2 --> IF2
-    SC2 --> WS
-    IF2 --> EX
+    subgraph DB["PostgreSQL Database"]
+        direction TB
+        CP[("card_profiles\n(JSONB ML Memory)")]
+        STX[("scored_transactions\n(Audit Log)")]
+        GB[("global_blocklist\n(Cross-Card Fraud)")]
+        OF[("outcome_feedback\n(Chargebacks/Analyst)")]
+        PRL[("profile_reinforcement_log")]
+    end
+
+    DS --> SE
+    SE --> RF
+    RF --> FE
+    FE --> BL
+    BL --> SC
+    SC --> IF
+    SC --> WS
+    IF --> EX
     WS --> EX
     EX --> RESP["DeviationReport JSON"]
     RESP --> BG
-    BG --> PG
+    
+    BG --> |"Upsert JSONB"| CP
+    BG --> |"Insert Audit"| STX
+    
+    OP --> CP
+    
+    OF -.-> |"Feedback API"| GB
+    OF -.-> |"Feedback API"| PRL
+    BL -.-> |"Reads"| GB
+    RF -.-> |"Reads"| CP
 ```
 
 1. **API Gateway (Node.js/Express)**: Handles payload validation, authentication, rate limiting, and hashing of sensitive fields (e.g., PANs) before routing to the scoring engine.
-2. **Scoring Engine (Python/FastAPI via Uvicorn)**: The core intelligence. It extracts features, calculates Total Deviation using expert-set static weights, runs the Isolation Forest inference, and determines the final risk tier (`LOW`, `MEDIUM`, `HIGH`).
-3. **Database (PostgreSQL)**: Serves as a persistent store for historical transaction profiles (via the `synthetic_profiles` table) and an audit log for all scored transactions.
-4. **Presentation Dashboard**: A beautifully designed, interactive Vanilla JS + HTML web interface directly served by the FastAPI engine, allowing you to test and visualize "Normal" vs. "Anomalous" transactions in real-time.
+2. **Scoring Engine (Python/FastAPI via Uvicorn)**: The core intelligence. It extracts features, checks the global fraud blocklist, calculates Total Deviation, runs the Isolation Forest inference, and determines the final risk tier (`LOW`, `MEDIUM`, `HIGH`). It handles database writes asynchronously via Background Tasks to guarantee sub-millisecond response latencies.
+3. **Offline Pipeline**: A sequential Python pipeline that generates synthetic transaction data, bootstraps the JSONB profile memory, computes surprise vectors, and trains the `isolation_forest.pkl` model.
+4. **Database (PostgreSQL)**: Serves as a persistent store for historical transaction profiles (`card_profiles`), global fraud indicators (`global_blocklist`), and an immutable audit log (`scored_transactions`).
+5. **Presentation Dashboard**: A beautifully designed, interactive Vanilla JS + HTML web interface directly served by the FastAPI engine, allowing you to test and visualize "Normal" vs. "Anomalous" transactions in real-time.
 
 ## The Scoring Pipeline
 
@@ -71,33 +91,59 @@ flowchart TB
 
 ## Running the Project
 
-The easiest way to start the entire stack is via Docker Compose:
-```bash
-docker-compose up --build
-```
-This single command spins up PostgreSQL, the Node.js API Gateway, and the FastAPI Scoring Engine.
+You must initialize the database, run the offline pipeline (to generate data and train the ML model), and start the FastAPI server. Choose the method that best fits your environment:
 
-### Running Locally (Without Docker)
-If you prefer to run the components natively on your machine, we have provided an automated pipeline to handle database creation, dataset generation, and model training:
+### Option 1: Using Docker (Highly Recommended)
+The most reliable, production-accurate way to run this MVP is using Docker for the PostgreSQL database. This ensures a clean environment and avoids system-wide installations.
 
-1. **Start the Embedded PostgreSQL Server**:
+1. **Start the Database via Docker Compose**:
+   Open a terminal in the project root (`d:\FRM Anamoly MVP`) and run:
    ```bash
-   python start_db.py
+   docker compose up postgres -d
    ```
-   *Keep this terminal window open! It runs a localized instance of PostgreSQL using `pgserver` so you don't need system-wide installations.*
+   *This spins up a dedicated PostgreSQL 16 container on port 5432 and initializes the V4 schema tables automatically in the background.*
 
-2. **Open a NEW Terminal and Set the Database URL**:
-   For example, in PowerShell:
+2. **Set the Database Connection String**:
+   In your terminal (e.g., PowerShell), export the environment variable so the Python scripts know how to reach the Docker database:
    ```powershell
-   $env:PG_DSN="postgresql://postgres:@127.0.0.1:5432/postgres"
+   $env:PG_DSN="postgresql://postgres:postgres@127.0.0.1:5432/anomaly_db"
    ```
 
 3. **Run the Full Offline Pipeline**:
-   If this is your first time starting the project, you need to generate the synthetic dataset, bootstrap the profiles, and train the Machine Learning model:
+   You must populate the empty database with the synthetic dataset, bootstrap the user profiles, and train the Machine Learning model. (Run this in the same terminal where you set `PG_DSN`):
    ```bash
    python scripts/run_pipeline.py
    ```
-   *(This sequentially runs the dataset generation, profile bootstrapping, surprise vector computation, and model training.)*
+   *(This sequentially runs dataset generation, profile bootstrapping, surprise vector computation, and model training. It will say "Using existing database from PG_DSN" at the top).*
+
+4. **Start the FastAPI Scoring Engine**:
+   Once the pipeline finishes, start the Uvicorn server:
+   ```bash
+   python -m uvicorn scoring-engine.app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+
+---
+
+### Option 2: Fully Local (No Docker)
+If you cannot use Docker, we have provided a Python script that uses `pgserver` to spin up a temporary, embedded PostgreSQL instance without requiring admin rights or a system-wide installation.
+
+1. **Start the Embedded PostgreSQL Server**:
+   Open a terminal and run:
+   ```bash
+   python start_db.py
+   ```
+   *Keep this terminal window OPEN! Closing it will shut down the database.* The script will print out a connection string that looks something like `postgresql://postgres:@127.0.0.1:XXXXX/postgres`.
+
+2. **Open a NEW Terminal and Set the Database URL**:
+   Copy the `PG_DSN` provided by the `start_db.py` terminal and set it in your new PowerShell window:
+   ```powershell
+   $env:PG_DSN="postgresql://postgres:@127.0.0.1:XXXXX/postgres"
+   ```
+
+3. **Run the Full Offline Pipeline**:
+   ```bash
+   python scripts/run_pipeline.py
+   ```
 
 4. **Start the FastAPI Scoring Engine**:
    ```bash
@@ -109,5 +155,5 @@ If you prefer to run the components natively on your machine, we have provided a
 Once the FastAPI server is running, navigate to `http://127.0.0.1:8000/` in your browser to access the **3DS Risk Intelligence Console**, a highly polished, interactive dashboard with three core views:
 
 1. **Transaction Simulator**: Test exact JSON payloads against the scoring engine. You can click **"Normal Txn"** to see how a typical transaction perfectly matches a card's baseline, yielding a `LOW` risk tier, or **"Anomalous Txn"** to simulate an integrity threat (e.g., unknown app package, massive purchase amount, mismatched OS) triggering a `HIGH` risk tier. *Scoring transactions here will dynamically update the historical profile baseline in real-time!*
-2. **Dynamic Dataset Load Simulator**: Trigger a concurrent simulation of 50 synthetic transactions instantly. The simulator splits traffic into Normal (80%), Suspicious (15%), and Abnormal (5%) buckets, scoring them live. You can click on any generated row to open an interactive modal revealing the full raw payload and the precise mathematical factors that drove the engine's tier decision.
-3. **Profile Explorer**: A direct view into the PostgreSQL `synthetic_profiles` table. View the exact learning state of each card hash, including Profile Maturity (transaction count and model confidence percentage), Trust State (Normal, Probation, or Elevated Scrutiny), and a dynamically updating `last_updated` timestamp. You can click on any profile to see the raw multi-dimensional mathematical frequency dictionaries the engine is building under the hood.
+2. **Dynamic Dataset Load Simulator**: Trigger a concurrent simulation of 50 synthetic transactions instantly. The simulator splits traffic into Normal (80%), Suspicious (15%), and Abnormal (5%) buckets, scoring them live. The results table dynamically extracts and displays the **Top Risk Factors** for each transaction. You can hover and click on any generated row to open an interactive modal revealing the full raw payload and the precise mathematical factors that drove the engine's tier decision.
+3. **Profile Explorer**: A direct view into the PostgreSQL `card_profiles` table. View the exact learning state of each card hash, including Profile Maturity (transaction count and model confidence percentage), Trust State (Normal, Probation, or Elevated Scrutiny), and a dynamically updating `last_updated` timestamp. You can click on any profile to see the raw multi-dimensional mathematical frequency dictionaries the engine is building under the hood.
