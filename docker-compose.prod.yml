@@ -1,0 +1,42 @@
+# ============================================================
+# 3DS Anomaly Detection System — AWS Production Compose
+# ============================================================
+#
+# Usage (on EC2): 
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# NOTE: PostgreSQL is handled externally by AWS RDS.
+# ============================================================
+
+version: "3.9"
+
+services:
+
+  # --- FastAPI Scoring Engine ---
+  scoring-engine:
+    build:
+      context: ./scoring-engine
+      dockerfile: Dockerfile
+    container_name: anomaly-scoring-prod
+    ports:
+      - "8000:8000"
+    environment:
+      MODEL_PATH: /app/model/isolation_forest.pkl
+      PG_DSN: ${PG_DSN}
+    restart: always
+
+  # --- Node.js API Gateway ---
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: anomaly-gateway-prod
+    ports:
+      - "80:3000"
+    environment:
+      PORT: 3000
+      SCORING_ENGINE_URL: http://scoring-engine:8000
+      API_KEY: ${API_KEY:-dev-api-key-change-in-production}
+    depends_on:
+      - scoring-engine
+    restart: always

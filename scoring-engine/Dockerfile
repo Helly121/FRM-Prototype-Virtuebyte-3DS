@@ -9,9 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Create model directory
-RUN mkdir -p model data
-
+# Copy trained model and required data (Bake into production image)
+COPY model/ ./model/
+COPY data/ ./data/
 # Expose port
 EXPOSE 8000
 
