@@ -43,12 +43,20 @@ Before starting the API, the database needs the schema and ML model data.
    ```bash
    ssh -i "your-key.pem" ubuntu@<PUBLIC_IP>
    ```
-3. Install Docker on the server:
+3. Install Docker and configure Swap Space (Crucial for ML on Free Tier!):
    ```bash
    sudo apt update
    sudo apt install docker.io docker-compose -y
    sudo usermod -aG docker ubuntu
-   # Exit and reconnect to apply permissions
+   
+   # Allocate 2GB of Swap space so the ML model doesn't run out of memory
+   sudo fallocate -l 2G /swapfile
+   sudo chmod 600 /swapfile
+   sudo mkswap /swapfile
+   sudo swapon /swapfile
+   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+
+   # Exit and reconnect to apply Docker permissions
    exit
    ssh -i "your-key.pem" ubuntu@<PUBLIC_IP>
    ```
